@@ -2,8 +2,16 @@
 
 ## 0.1.1
 
-Documentation-only release. No functional changes; the package behaves exactly
-as 0.1.0.
+### Fixed
+
+- **Session replay no longer stalls the UI.** Re-encoding a captured frame as
+  JPEG is pure CPU work and ran on the UI thread: a 1920x1080 frame measured at
+  ~183 ms, dropping roughly eleven frames every time a snapshot was taken. The
+  encode now runs on a separate isolate through `Isolate.run`, leaving the
+  calling isolate responsive. On web, where isolates do not exist, the previous
+  behaviour is kept — session replay is not supported there anyway.
+
+### Changed
 
 - Translated all documentation and code comments to English: README, CHANGELOG,
   the package description, dartdoc comments across the public API, and the

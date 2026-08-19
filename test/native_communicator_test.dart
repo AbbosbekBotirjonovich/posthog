@@ -102,7 +102,7 @@ void main() {
     return const [];
   }
 
-  group('replay eventlarini yuborish', () {
+  group('sending replay events', () {
     test('sends a meta event through the replay queue', () async {
       await setupSdk();
 

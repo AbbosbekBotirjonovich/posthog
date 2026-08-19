@@ -89,6 +89,9 @@ PostHogWidget(
 );
 ```
 
+Captured frames are re-encoded as JPEG on a separate isolate, so compressing a
+frame does not stall the UI thread.
+
 ## Usage
 
 ### Events

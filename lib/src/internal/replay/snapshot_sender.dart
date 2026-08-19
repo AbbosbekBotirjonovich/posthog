@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:image/image.dart' as img;
-
 import '../../util/logging.dart';
+import 'frame_encoder_web.dart'
+    if (dart.library.io) 'frame_encoder_io.dart';
 import 'rrweb_models.dart';
 
 /// Builds `$snapshot` events and hands them to the queue.
@@ -48,7 +47,7 @@ class SnapshotSender {
     }
   }
 
-  /// To'liq kadrni yuboradi.
+  /// Sends a full frame.
   Future<void> sendFullSnapshot(
     Uint8List imageBytes, {
     required int id,
@@ -56,8 +55,13 @@ class SnapshotSender {
     required int y,
   }) async {
     try {
-      final encoded = _encode(imageBytes);
-      if (encoded == null) return;
+      // Encoding runs on a separate isolate: it is heavy CPU work and would
+      // otherwise stall the UI thread for the duration of the frame.
+      final encoded = await encodeFrame(imageBytes, jpegQuality);
+      if (encoded == null) {
+        printIfDebug('[PostHog] could not encode the frame');
+        return;
+      }
 
       await _enqueue(
         RRWebEventBuilder.fullSnapshot(
@@ -76,37 +80,4 @@ class SnapshotSender {
       printIfDebug('[PostHog] full snapshot was not sent: $e');
     }
   }
-
-  /// PNG baytlarini JPEG base64 ga aylantiradi.
-  _EncodedImage? _encode(Uint8List pngBytes) {
-    try {
-      final decoded = img.decodeImage(pngBytes);
-      if (decoded == null) {
-        printIfDebug('[PostHog] could not decode the frame');
-        return null;
-      }
-
-      final jpeg = img.encodeJpg(decoded, quality: jpegQuality);
-      return _EncodedImage(
-        base64: base64Encode(jpeg),
-        width: decoded.width,
-        height: decoded.height,
-      );
-    } catch (e) {
-      printIfDebug('[PostHog] error encoding the frame: $e');
-      return null;
-    }
-  }
-}
-
-class _EncodedImage {
-  const _EncodedImage({
-    required this.base64,
-    required this.width,
-    required this.height,
-  });
-
-  final String base64;
-  final int width;
-  final int height;
 }
