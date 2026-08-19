@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1
+
+Documentation-only release. No functional changes; the package behaves exactly
+as 0.1.0.
+
+- Translated all documentation and code comments to English: README, CHANGELOG,
+  the package description, dartdoc comments across the public API, and the
+  debug messages printed when `debug: true` is set.
+- Rewrote the example app's README, which still carried the `flutter create`
+  template, and translated the example's UI strings.
+
 ## 0.1.0
 
 A pure-Dart reimplementation of the official `posthog_flutter` plugin

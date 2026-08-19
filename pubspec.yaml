@@ -2,7 +2,7 @@ name: posthog_dart
 description: >-
   Pure-Dart PostHog SDK that works identically on Windows, Linux, Android, iOS,
   macOS and Web. API-compatible with the official posthog_flutter plugin.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/AbbosbekBotirjonovich/posthog
 issue_tracker: https://github.com/AbbosbekBotirjonovich/posthog/issues
 
