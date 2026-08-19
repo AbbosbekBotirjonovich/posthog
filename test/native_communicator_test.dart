@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
-import 'package:posthog/src/posthog_http.dart';
-import 'package:posthog/src/replay/native_communicator.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/posthog_http.dart';
+import 'package:posthog_dart/src/replay/native_communicator.dart';
 
 /// Replay pipeline'ini transportga ulovchi qatlamni tekshiradi.
 ///

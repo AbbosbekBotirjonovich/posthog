@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/posthog_preferences.dart';
-import 'package:posthog/src/internal/posthog_queue_storage.dart';
-import 'package:posthog/src/internal/posthog_uuid.dart';
+import 'package:posthog_dart/src/internal/posthog_preferences.dart';
+import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
+import 'package:posthog_dart/src/internal/posthog_uuid.dart';
 
 /// Fayl tizimidagi saqlashni tekshiradi.
 ///

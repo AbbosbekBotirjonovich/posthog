@@ -3,7 +3,7 @@
 /// This package is API-compatible with the official `posthog_flutter` plugin,
 /// but uses a pure-Dart HTTP transport instead of the native SDKs. As a result
 /// it works fully on Windows and Linux, just as it does on Android/iOS/Web.
-library posthog;
+library posthog_dart;
 
 export 'src/feature_flag_result.dart';
 export 'src/logs/posthog_log_record.dart';

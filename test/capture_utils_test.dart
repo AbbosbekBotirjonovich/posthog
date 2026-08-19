@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/utils/capture_utils.dart';
+import 'package:posthog_dart/src/utils/capture_utils.dart';
 
 void main() {
   group('CaptureUtils.extractUserProperties', () {

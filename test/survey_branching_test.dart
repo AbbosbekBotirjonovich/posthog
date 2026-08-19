@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/surveys/survey_branching.dart';
+import 'package:posthog_dart/src/internal/surveys/survey_branching.dart';
 
 void main() {
   group('SurveyBranching', () {

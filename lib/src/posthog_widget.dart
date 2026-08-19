@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 // The replay capturer defines its own ImageInfo; hide Flutter's.
 import 'package:flutter/material.dart' hide ImageInfo;
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/posthog_internal_events.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_controller.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/posthog_internal_events.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 
 import 'replay/change_detector.dart';
 import 'replay/native_communicator.dart';

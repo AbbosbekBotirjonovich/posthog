@@ -1,7 +1,7 @@
 import 'package:flutter/rendering.dart';
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/replay/element_parsers/element_parser.dart';
-import 'package:posthog/src/replay/element_parsers/element_parser_factory.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parser.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parser_factory.dart';
 
 class ElementParsersConst {
   final ElementParserFactory _factory;

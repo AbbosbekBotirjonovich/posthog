@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/posthog_api.dart';
-import 'package:posthog/src/internal/posthog_queue.dart';
-import 'package:posthog/src/internal/posthog_queue_storage.dart';
-import 'package:posthog/src/internal/posthog_retry_policy.dart';
+import 'package:posthog_dart/src/internal/posthog_api.dart';
+import 'package:posthog_dart/src/internal/posthog_queue.dart';
+import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
+import 'package:posthog_dart/src/internal/posthog_retry_policy.dart';
 
 /// Xotiradagi soxta store — disk I/O siz navbat mantiqini tekshirish uchun.
 class _FakeStore implements QueueStore {

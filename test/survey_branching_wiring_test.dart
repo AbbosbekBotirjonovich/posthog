@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/surveys/survey_branching.dart';
-import 'package:posthog/src/surveys/models/posthog_display_survey.dart';
-import 'package:posthog/src/surveys/models/survey_callbacks.dart';
+import 'package:posthog_dart/src/internal/surveys/survey_branching.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
+import 'package:posthog_dart/src/surveys/models/survey_callbacks.dart';
 
 /// Branching payload'dan modelgacha va undan `SurveyBranching` gacha
 /// yetib borishini tekshiradi.

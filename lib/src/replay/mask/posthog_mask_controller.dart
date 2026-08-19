@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/replay/element_parsers/element_data.dart';
-import 'package:posthog/src/replay/element_parsers/element_parser.dart';
-import 'package:posthog/src/replay/element_parsers/element_parser_factory.dart';
-import 'package:posthog/src/replay/element_parsers/element_parsers_const.dart';
-import 'package:posthog/src/replay/element_parsers/element_data_factory.dart';
-import 'package:posthog/src/replay/element_parsers/element_object_parser.dart';
-import 'package:posthog/src/replay/element_parsers/root_element_provider.dart';
-import 'package:posthog/src/replay/mask/widget_elements_decipher.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parser.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parser_factory.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parsers_const.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data_factory.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_object_parser.dart';
+import 'package:posthog_dart/src/replay/element_parsers/root_element_provider.dart';
+import 'package:posthog_dart/src/replay/mask/widget_elements_decipher.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 
 class PostHogMaskController {
   Map<String, ElementParser> parsers;

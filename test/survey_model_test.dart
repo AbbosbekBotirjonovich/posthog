@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/surveys/models/posthog_display_choice_question.dart';
-import 'package:posthog/src/surveys/models/posthog_display_rating_question.dart';
-import 'package:posthog/src/surveys/models/posthog_display_survey.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_choice_question.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_rating_question.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
 
 void main() {
   Map<String, dynamic> surveyWith(List<Map<String, dynamic>> questions) => {

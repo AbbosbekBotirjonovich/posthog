@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/context/posthog_context.dart';
-import 'package:posthog/src/internal/posthog_identity_manager.dart';
-import 'package:posthog/src/internal/posthog_preferences.dart';
-import 'package:posthog/src/internal/posthog_property_builder.dart';
-import 'package:posthog/src/internal/posthog_session_manager.dart';
-import 'package:posthog/src/posthog_config.dart';
+import 'package:posthog_dart/src/internal/context/posthog_context.dart';
+import 'package:posthog_dart/src/internal/posthog_identity_manager.dart';
+import 'package:posthog_dart/src/internal/posthog_preferences.dart';
+import 'package:posthog_dart/src/internal/posthog_property_builder.dart';
+import 'package:posthog_dart/src/internal/posthog_session_manager.dart';
+import 'package:posthog_dart/src/posthog_config.dart';
 
 class _FakeStore implements PreferencesStore {
   String? content;

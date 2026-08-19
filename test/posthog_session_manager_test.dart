@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/posthog_session_manager.dart';
+import 'package:posthog_dart/src/internal/posthog_session_manager.dart';
 
 void main() {
   group('PostHogSessionManager', () {

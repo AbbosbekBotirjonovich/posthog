@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_widget.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_widget.dart';
 
 class ElementData {
   Rect rect;

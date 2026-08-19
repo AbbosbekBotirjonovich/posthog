@@ -5,7 +5,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 import 'package:stack_trace/stack_trace.dart';
 import 'utils/isolate_utils.dart' as isolate_utils;
 import 'posthog_exception.dart';
@@ -277,11 +277,12 @@ class DartExceptionProcessor {
   /// Determines if a stack frame belongs to PostHog SDK (just check package for now)
   ///
   /// Differs from PostHog upstream: the official plugin only checked for
-  /// `posthog_flutter`. This package ships as `posthog`, but both are accepted,
-  /// so apps migrating from the official plugin still have their older frames
-  /// recognised as SDK-internal.
+  /// `posthog_flutter`. This package ships as `posthog_dart`, but both are
+  /// accepted, so apps migrating from the official plugin still have their
+  /// older frames recognised as SDK-internal.
   static bool _isPostHogFrame(Frame frame) {
-    return frame.package == 'posthog' || frame.package == 'posthog_flutter';
+    return frame.package == 'posthog_dart' ||
+        frame.package == 'posthog_flutter';
   }
 
   /// Asynchronous gap frame for separating async traces

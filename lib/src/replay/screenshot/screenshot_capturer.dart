@@ -6,15 +6,15 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart' show Element, WidgetsBinding;
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/replay/element_parsers/element_data.dart';
-import 'package:posthog/src/replay/image_extension.dart';
-import 'package:posthog/src/replay/mask/image_mask_painter.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_controller.dart';
-import 'package:posthog/src/replay/native_communicator.dart';
-import 'package:posthog/src/replay/screenshot/snapshot_manager.dart';
-import 'package:posthog/src/replay/size_extension.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_dart/src/replay/image_extension.dart';
+import 'package:posthog_dart/src/replay/mask/image_mask_painter.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_dart/src/replay/native_communicator.dart';
+import 'package:posthog_dart/src/replay/screenshot/snapshot_manager.dart';
+import 'package:posthog_dart/src/replay/size_extension.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 
 class ImageInfo {
   final int id;

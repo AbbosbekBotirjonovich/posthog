@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:posthog/src/replay/element_parsers/element_data.dart';
-import 'package:posthog/src/replay/element_parsers/element_data_factory.dart';
-import 'package:posthog/src/replay/element_parsers/element_object_parser.dart';
-import 'package:posthog/src/replay/element_parsers/root_element_provider.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data_factory.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_object_parser.dart';
+import 'package:posthog_dart/src/replay/element_parsers/root_element_provider.dart';
 
 class WidgetElementsDecipher {
   late ElementData _rootElementData;

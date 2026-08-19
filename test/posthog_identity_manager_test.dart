@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/posthog_identity_manager.dart';
-import 'package:posthog/src/internal/posthog_preferences.dart';
+import 'package:posthog_dart/src/internal/posthog_identity_manager.dart';
+import 'package:posthog_dart/src/internal/posthog_preferences.dart';
 
 /// Xotiradagi soxta ombor.
 class _FakeStore implements PreferencesStore {

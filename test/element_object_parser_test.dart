@@ -2,10 +2,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
-import 'package:posthog/src/replay/element_parsers/element_data.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_controller.dart';
 
 import 'posthog_flutter_platform_interface_fake.dart';
 

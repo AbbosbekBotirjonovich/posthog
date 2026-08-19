@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:posthog/posthog.dart';
+import 'package:posthog_dart/posthog_dart.dart';
 
 /// Loyiha tokeni. Haqiqiy token bilan almashtiring yoki `--dart-define` bilan
 /// bering:

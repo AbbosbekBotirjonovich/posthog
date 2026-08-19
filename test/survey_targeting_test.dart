@@ -2,13 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:posthog/src/internal/posthog_api.dart';
-import 'package:posthog/src/internal/posthog_feature_flags.dart';
-import 'package:posthog/src/internal/posthog_identity_manager.dart';
-import 'package:posthog/src/internal/posthog_preferences.dart';
-import 'package:posthog/src/internal/surveys/survey_targeting.dart';
-import 'package:posthog/src/util/platform_io_stub.dart'
-    if (dart.library.io) 'package:posthog/src/util/platform_io_real.dart';
+import 'package:posthog_dart/src/internal/posthog_api.dart';
+import 'package:posthog_dart/src/internal/posthog_feature_flags.dart';
+import 'package:posthog_dart/src/internal/posthog_identity_manager.dart';
+import 'package:posthog_dart/src/internal/posthog_preferences.dart';
+import 'package:posthog_dart/src/internal/surveys/survey_targeting.dart';
+import 'package:posthog_dart/src/util/platform_io_stub.dart'
+    if (dart.library.io) 'package:posthog_dart/src/util/platform_io_real.dart';
 
 /// Remote config javobini boshqarish imkonini beruvchi klient.
 class _FakeClient extends http.BaseClient {

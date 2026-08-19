@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/surveys/models/posthog_display_survey.dart';
-import 'package:posthog/src/surveys/models/survey_appearance.dart';
-import 'package:posthog/src/surveys/models/survey_callbacks.dart';
-import 'package:posthog/src/surveys/widgets/survey_bottom_sheet.dart';
-import 'package:posthog/src/surveys/widgets/survey_choice_button.dart';
-import 'package:posthog/src/surveys/widgets/survey_icon.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
+import 'package:posthog_dart/src/surveys/models/survey_appearance.dart';
+import 'package:posthog_dart/src/surveys/models/survey_callbacks.dart';
+import 'package:posthog_dart/src/surveys/widgets/survey_bottom_sheet.dart';
+import 'package:posthog_dart/src/surveys/widgets/survey_choice_button.dart';
+import 'package:posthog_dart/src/surveys/widgets/survey_icon.dart';
 
 void main() {
   testWidgets('selected choices draw the check without a font glyph', (

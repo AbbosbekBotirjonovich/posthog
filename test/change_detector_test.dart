@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/replay/change_detector.dart';
+import 'package:posthog_dart/src/replay/change_detector.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:posthog/src/replay/screenshot/screenshot_capturer.dart';
+import 'package:posthog_dart/src/replay/screenshot/screenshot_capturer.dart';
 
 class SnapshotManager {
   // Expando is the equivalent of weakref

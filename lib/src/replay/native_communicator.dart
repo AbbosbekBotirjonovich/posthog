@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
-import 'package:posthog/src/posthog_http.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/posthog_http.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 
 /// Connects the replay pipeline to the transport.
 ///

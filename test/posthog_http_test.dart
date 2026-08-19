@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:posthog/src/internal/posthog_api.dart';
-import 'package:posthog/src/internal/posthog_queue.dart';
-import 'package:posthog/src/internal/posthog_queue_storage.dart';
+import 'package:posthog_dart/src/internal/posthog_api.dart';
+import 'package:posthog_dart/src/internal/posthog_queue.dart';
+import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
 
 /// Yuborilgan so'rovlarni yozib oluvchi soxta HTTP klient.
 class _RecordingClient extends http.BaseClient {

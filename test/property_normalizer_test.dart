@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/utils/property_normalizer.dart';
+import 'package:posthog_dart/src/utils/property_normalizer.dart';
 
 void main() {
   group('PropertyNormalizer', () {

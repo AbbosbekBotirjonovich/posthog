@@ -5,12 +5,12 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:posthog/src/util/platform_io_stub.dart'
-    if (dart.library.io) 'package:posthog/src/util/platform_io_real.dart';
+import 'package:posthog_dart/src/util/platform_io_stub.dart'
+    if (dart.library.io) 'package:posthog_dart/src/util/platform_io_real.dart';
 
 import 'isolate_handler_io.dart'
     if (dart.library.js_interop) 'isolate_handler_web.dart';
-import 'package:posthog/src/util/logging.dart';
+import 'package:posthog_dart/src/util/logging.dart';
 
 import '../posthog_flutter_platform_interface.dart';
 import '../posthog_config.dart';

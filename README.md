@@ -1,6 +1,6 @@
-# posthog
+# posthog_dart
 
-[![pub package](https://img.shields.io/pub/v/posthog.svg)](https://pub.dev/packages/posthog)
+[![pub package](https://img.shields.io/pub/v/posthog_dart.svg)](https://pub.dev/packages/posthog_dart)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [PostHog](https://posthog.com) uchun sof Dart SDK — **Windows, Linux, Android,
@@ -32,7 +32,7 @@ qoldiriladi.  ² Web'da navbat xotirada; batafsil [quyida](#malumot-saqlanishi).
 
 Rasmiy plagin bilan taqqoslaganda:
 
-| | `posthog_flutter` | `posthog` |
+| | `posthog_flutter` | `posthog_dart` |
 |---|---|---|
 | Windows / Linux | ❌ jimgina no-op | ✅ to'liq |
 | Native crash (fatal) | ✅ | ❌ |
@@ -46,14 +46,14 @@ saqlangan — mavjud kod kompilyatsiya bo'ladi. Batafsil:
 
 ```yaml
 dependencies:
-  posthog: ^0.1.0
+  posthog_dart: ^0.1.0
 ```
 
 ## Boshlash
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:posthog/posthog.dart';
+import 'package:posthog_dart/posthog_dart.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -224,7 +224,7 @@ Import qatorini almashtiring:
 import 'package:posthog_flutter/posthog_flutter.dart';
 
 // yangi
-import 'package:posthog/posthog.dart';
+import 'package:posthog_dart/posthog_dart.dart';
 ```
 
 `pubspec.yaml` da:
@@ -232,7 +232,7 @@ import 'package:posthog/posthog.dart';
 ```yaml
 dependencies:
   # posthog_flutter: ^5.36.2
-  posthog: ^0.1.0
+  posthog_dart: ^0.1.0
 ```
 
 Boshqa hech nima o'zgarmaydi. Native tomon (Android `AndroidManifest.xml`,

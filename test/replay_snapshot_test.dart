@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:posthog/src/internal/replay/rrweb_models.dart';
-import 'package:posthog/src/internal/replay/snapshot_sender.dart';
+import 'package:posthog_dart/src/internal/replay/rrweb_models.dart';
+import 'package:posthog_dart/src/internal/replay/snapshot_sender.dart';
 
 /// Kichik haqiqiy PNG yasaydi — dekodlash yo'lini sinash uchun.
 Uint8List makePng(int width, int height) {

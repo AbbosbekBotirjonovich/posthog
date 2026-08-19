@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:posthog/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_data.dart';
 
 class ImageMaskPainter {
   void drawMaskedImage(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:posthog/src/replay/element_parsers/element_parser.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_controller.dart';
-import 'package:posthog/src/replay/size_extension.dart';
+import 'package:posthog_dart/src/replay/element_parsers/element_parser.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_dart/src/replay/size_extension.dart';
 
 /// Parser for [RenderEditable] objects (TextField input text).
 ///

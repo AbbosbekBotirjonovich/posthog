@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/internal/posthog_retry_policy.dart';
+import 'package:posthog_dart/src/internal/posthog_retry_policy.dart';
 
 /// Jitter'ni nolga tushiruvchi Random — kechikishlarni aniq tekshirish uchun.
 class _ZeroRandom implements Random {

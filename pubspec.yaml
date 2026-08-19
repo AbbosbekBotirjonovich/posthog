@@ -1,4 +1,4 @@
-name: posthog
+name: posthog_dart
 description: >-
   Sof Dart PostHog SDK — Windows, Linux, Android, iOS, macOS va Web'da bir xil
   ishlaydi. Rasmiy posthog_flutter bilan API darajasida mos.

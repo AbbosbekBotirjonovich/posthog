@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/posthog_observer.dart';
-import 'package:posthog/src/surveys/models/posthog_display_link_question.dart';
-import 'package:posthog/src/surveys/models/posthog_display_survey.dart';
-import 'package:posthog/src/surveys/survey_service.dart';
-import 'package:posthog/src/surveys/widgets/survey_bottom_sheet.dart';
+import 'package:posthog_dart/src/posthog_observer.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_link_question.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
+import 'package:posthog_dart/src/surveys/survey_service.dart';
+import 'package:posthog_dart/src/surveys/widgets/survey_bottom_sheet.dart';
 
 void main() {
   // Builds a minimal survey dict (as forwarded by the native method channel)

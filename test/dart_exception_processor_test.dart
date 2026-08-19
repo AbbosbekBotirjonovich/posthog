@@ -3,8 +3,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/error_tracking/dart_exception_processor.dart';
-import 'package:posthog/src/error_tracking/posthog_exception.dart';
+import 'package:posthog_dart/src/error_tracking/dart_exception_processor.dart';
+import 'package:posthog_dart/src/error_tracking/posthog_exception.dart';
 
 void main() {
   group('DartExceptionProcessor', () {
@@ -359,11 +359,11 @@ void main() {
 
       // Create a mock stack trace that includes PostHog frames
       final mockStackTrace = StackTrace.fromString('''
-#0      DartExceptionProcessor.processException (package:posthog/src/error_tracking/dart_exception_processor.dart:28:7)
-#1      PosthogFlutterIO.captureException (package:posthog/src/posthog_flutter_io.dart:435:29)
-#2      Posthog.captureException (package:posthog/src/posthog.dart:136:7)
+#0      DartExceptionProcessor.processException (package:posthog_dart/src/error_tracking/dart_exception_processor.dart:28:7)
+#1      PosthogFlutterIO.captureException (package:posthog_dart/src/posthog_flutter_io.dart:435:29)
+#2      Posthog.captureException (package:posthog_dart/src/posthog.dart:136:7)
 #3      userFunction (package:my_app/main.dart:100:5)
-#4      PosthogFlutterIO.setup (package:posthog/src/posthog.dart:136:7)
+#4      PosthogFlutterIO.setup (package:posthog_dart/src/posthog.dart:136:7)
 #5      main (package:some_lib/lib.dart:50:3)
 ''');
 
@@ -389,7 +389,7 @@ void main() {
       expect(tail[2]['filename'], 'main.dart');
       // Interior PostHog frame is preserved (only leading ones are stripped).
       // PostHog upstream'dan farq: paket nomi `posthog_flutter` emas, `posthog`.
-      expect(tail[1]['package'], 'posthog');
+      expect(tail[1]['package'], 'posthog_dart');
       expect(tail[1]['filename'], 'posthog.dart');
       // Entry point is first of the three.
       expect(tail[0]['package'], 'some_lib');

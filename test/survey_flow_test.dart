@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
-import 'package:posthog/src/posthog_http.dart';
-import 'package:posthog/src/surveys/models/posthog_display_survey.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/posthog_http.dart';
+import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
 
 /// So'rovnoma javob oqimini tekshiradi: javoblarni to'plash, branching orqali
 /// keyingi savolni tanlash, `survey shown` / `survey sent` / `survey dismissed`

@@ -1,7 +1,7 @@
-import 'package:posthog/src/feature_flag_result.dart';
-import 'package:posthog/src/logs/posthog_log_severity.dart';
-import 'package:posthog/src/posthog_config.dart';
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/feature_flag_result.dart';
+import 'package:posthog_dart/src/logs/posthog_log_severity.dart';
+import 'package:posthog_dart/src/posthog_config.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
 
 /// Captured exception call data
 class CapturedExceptionCall {

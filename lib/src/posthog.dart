@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart';
 
-import 'package:posthog/src/error_tracking/posthog_error_tracking_autocapture_integration.dart';
-import 'package:posthog/src/error_tracking/posthog_exception.dart';
+import 'package:posthog_dart/src/error_tracking/posthog_error_tracking_autocapture_integration.dart';
+import 'package:posthog_dart/src/error_tracking/posthog_exception.dart';
 import 'feature_flag_result.dart';
 import 'logs/posthog_log_record.dart';
 import 'logs/posthog_log_severity.dart';

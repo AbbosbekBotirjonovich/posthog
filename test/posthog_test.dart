@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/posthog.dart';
-import 'package:posthog/src/posthog_flutter_platform_interface.dart';
-import 'package:posthog/src/posthog_internal_events.dart';
-import 'package:posthog/src/replay/mask/posthog_mask_controller.dart';
-import 'package:posthog/src/replay/screenshot/screenshot_capturer.dart';
+import 'package:posthog_dart/posthog_dart.dart';
+import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog_dart/src/posthog_internal_events.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_dart/src/replay/screenshot/screenshot_capturer.dart';
 
 import 'posthog_flutter_platform_interface_fake.dart';
 

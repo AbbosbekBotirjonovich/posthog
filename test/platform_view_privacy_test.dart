@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:posthog/src/replay/mask/posthog_platform_view.dart';
-import 'package:posthog/src/replay/screenshot/screenshot_capturer.dart';
+import 'package:posthog_dart/src/replay/mask/posthog_platform_view.dart';
+import 'package:posthog_dart/src/replay/screenshot/screenshot_capturer.dart';
 
 void main() {
   group('resolvePrivacyPolicyForElement — privacy inheritance', () {
