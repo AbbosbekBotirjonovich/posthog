@@ -54,8 +54,8 @@ void main() {
       expect(identity.isIdentified, isTrue);
     });
 
-    // Backend anon va identifikatsiyalangan shaxsni shu property orqali
-    // birlashtiradi.
+    // The backend merges the anonymous and identified persons through this
+    // property.
     test('identify returns the previous anonymous id for merging', () {
       final anonymousId = identity.anonymousId;
 
@@ -64,7 +64,8 @@ void main() {
       expect(previous, anonymousId);
     });
 
-    // Ikkinchi marta yuborilsa backend shaxslarni noto'g'ri birlashtirardi.
+    // Sending it a second time would make the backend merge the wrong
+    // persons.
     test('identify returns null when the user is already identified', () {
       identity.identify('user-123');
 
@@ -108,8 +109,8 @@ void main() {
       expect(identity.distinctId, identity.anonymousId);
     });
 
-    // Bir qurilmadagi chiqish/kirish sikllari yangi qurilma sifatida
-    // hisoblanmasligi kerak.
+    // Sign-out/sign-in cycles on one device must not be counted as new
+    // devices.
     test('reset can keep the anonymous id', () {
       final originalAnonymous = identity.anonymousId;
       identity.identify('user-123');
@@ -151,8 +152,8 @@ void main() {
         expect(identity.isIdentified, isFalse);
       });
 
-      // Bootstrap faqat birinchi ishga tushishda ma'noga ega; mavjud
-      // foydalanuvchini qayta yozish uni boshqa shaxsga aylantirardi.
+      // Bootstrap only makes sense on the very first run; overwriting an
+      // existing user would turn them into a different person.
       test('never overwrites an existing identity', () {
         identity.identify('real-user');
 
@@ -224,7 +225,7 @@ void main() {
       expect(store.content, '{}');
     });
 
-    // Buzilgan holat SDK'ni ishdan chiqarmasligi kerak.
+    // Corrupt state must not break the SDK.
     test('starts empty when the stored state is corrupted', () async {
       store.content = '{not valid json';
 

@@ -10,7 +10,7 @@ import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
 class _RecordingClient extends http.BaseClient {
   final List<_RecordedRequest> requests = [];
 
-  /// URL bo'yicha javob: `null` bo'lsa 200 qaytariladi.
+  /// Response keyed by URL; `null` yields a 200.
   Map<String, String> responses = {};
 
   @override
@@ -44,7 +44,7 @@ class _RecordedRequest {
       (json['batch'] as List).cast<Map<String, dynamic>>();
 }
 
-/// Xotiradagi navbat ombori.
+/// In-memory queue store.
 class _MemoryQueueStore implements QueueStore {
   final Map<String, String> entries = {};
 
@@ -79,9 +79,8 @@ void main() {
     client = _RecordingClient();
   });
 
-  /// `PosthogHttp` ni to'liq qurish murakkab bog'liqliklarni talab qiladi,
-  /// shuning uchun bu yerda transport zanjiri to'g'ridan-to'g'ri sinovdan
-  /// o'tkaziladi: API -> navbat -> HTTP.
+  /// Building a full `PosthogHttp` requires an intricate dependency graph, so
+  /// the transport chain is exercised directly here: API -> queue -> HTTP.
   PostHogQueue buildQueue(PostHogApi api) {
     return PostHogQueue(
       name: 'events',
@@ -194,7 +193,7 @@ void main() {
         expect(api.assetsHost, 'https://eu-assets.i.posthog.com');
       });
 
-      // Self-hosted instansiyada alohida assets hosti yo'q.
+      // A self-hosted instance has no separate assets host.
       test('leaves a self-hosted host untouched', () {
         final api = PostHogApi(
           host: 'https://analytics.example.com',
@@ -222,7 +221,7 @@ void main() {
         expect(result.isRetriable, isTrue);
       });
 
-      // Rate limit va timeout vaqtinchalik — qayta urinish kerak.
+      // Rate limits and timeouts are transient, so they must be retried.
       test('marks 429 and 408 retriable', () {
         expect(
           const PostHogApiResult(success: false, statusCode: 429).isRetriable,
@@ -234,7 +233,7 @@ void main() {
         );
       });
 
-      // Boshqa 4xx — so'rovning o'zi noto'g'ri, qayta yuborish foydasiz.
+      // Other 4xx: the request itself is wrong, so resending is pointless.
       test('marks other 4xx non-retriable', () {
         expect(
           const PostHogApiResult(success: false, statusCode: 400).isRetriable,
@@ -267,7 +266,7 @@ void main() {
 
       final event = client.requests.single.batch.single;
 
-      // PostHog `/batch` uchun majburiy uchlik.
+      // The trio PostHog requires for `/batch`.
       expect(event['event'], 'order completed');
       expect(event['distinct_id'], 'user-1');
       expect(event['properties'], isA<Map>());

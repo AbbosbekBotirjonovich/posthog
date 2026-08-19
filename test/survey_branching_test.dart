@@ -44,8 +44,8 @@ void main() {
       expect(next.isSurveyCompleted, isFalse);
     });
 
-    // Native SDK ham shunday qiladi: tugash sahifasi joriy savol ustidan
-    // ko'rsatiladi, shuning uchun indeks siljimaydi.
+    // The native SDK behaves the same way: the end screen is shown over the
+    // current question, so the index does not move.
     test('end completes without moving the index', () {
       final next = SurveyBranching.nextQuestion(
         currentIndex: 0,
@@ -119,7 +119,7 @@ void main() {
         expect(next.questionIndex, 2);
       });
 
-      // Bitta tanlovli savol javobni ro'yxat sifatida beradi.
+      // A single-choice question supplies its answer as a list.
       test('unwraps a single-element list response', () {
         final next = SurveyBranching.nextQuestion(
           currentIndex: 0,

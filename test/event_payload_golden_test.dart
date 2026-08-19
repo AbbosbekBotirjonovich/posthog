@@ -8,17 +8,16 @@ import 'package:posthog_dart/posthog_dart.dart';
 import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
 import 'package:posthog_dart/src/posthog_http.dart';
 
-/// Rasmiy plaginning golden referensiga qarshi tekshiruv.
+/// Checks against the official plugin's golden reference.
 ///
-/// `test/snapshots/event_channel_shapes.json` rasmiy SDK har bir chaqiruv
-/// uchun native tomonga QANDAY maydonlarni uzatishini qayd etadi. Bu yerda
-/// xuddi shu kirish beriladi va HTTP payload'ida o'sha ma'lumot borligi
-/// tekshiriladi — shu bilan sof Dart implementatsiyasida hech qanday
-/// property tushib qolmagani empirik tasdiqlanadi.
+/// `test/snapshots/event_channel_shapes.json` records WHICH fields the official
+/// SDK passed to the native side for each call. The same input is fed in here
+/// and the HTTP payload is checked for that data, which empirically confirms
+/// the pure-Dart implementation drops no property.
 ///
-/// Solishtirish maydon-bo'yicha, bayt-bo'yicha emas: transport MethodChannel
-/// dan HTTP'ga o'zgargani uchun o'rash (`arguments` -> `properties`) boshqacha,
-/// lekin ma'lumotning o'zi bir xil bo'lishi shart.
+/// The comparison is field-by-field, not byte-by-byte: because the transport
+/// moved from MethodChannel to HTTP the envelope differs (`arguments` ->
+/// `properties`), but the data itself must be identical.
 class _CapturingClient extends http.BaseClient {
   final List<Map<String, dynamic>> events = [];
 
@@ -128,7 +127,7 @@ void main() {
       final event = await waitForEvent('order completed');
       final properties = event['properties'] as Map<String, dynamic>;
 
-      // Foydalanuvchi bergan har bir property yetib borishi kerak.
+      // Every caller-supplied property must arrive.
       expect(properties['order_id'], expectedProperties['order_id']);
       expect(properties['total'], expectedProperties['total']);
       expect(properties['items'], expectedProperties['items']);
@@ -231,7 +230,7 @@ void main() {
       expect(properties[r'$group_set'], expected['groupProperties']);
     });
 
-    // Guruh o'rnatilgandan keyin keyingi eventlar uni olib yurishi kerak.
+    // Once a group is set, subsequent events must carry it.
     test('groups ride along on later events', () async {
       final expected = goldenFor('group');
 

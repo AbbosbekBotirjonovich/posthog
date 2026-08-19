@@ -99,7 +99,7 @@ void main() {
       await buildTargeting().load();
       await preferences.flush();
 
-      // Tarmoq yo'q — cache ishlashi kerak.
+      // No network, so the cache must be used.
       client.failRequests = true;
       final reloaded = buildTargeting();
       await reloaded.load();
@@ -164,7 +164,7 @@ void main() {
       expect(targeting.hasSeen('s1'), isTrue);
     });
 
-    // `schedule: always` bo'lgan so'rovnoma qayta ko'rsatilishi kerak.
+    // A survey with `schedule: always` must be shown again.
     test('repeats a survey scheduled as always', () async {
       client.surveys = [activeSurvey('s1', schedule: 'always')];
       final targeting = buildTargeting();
@@ -226,8 +226,8 @@ void main() {
       expect(targeting.nextSurvey(), isNull);
     });
 
-    // Ichki targeting bayrog'i qayta ko'rsatiladigan so'rovnomani bloklamasligi
-    // kerak — u birinchi ko'rsatishdan keyin o'chib qoladi.
+    // The internal targeting flag must not block a repeatable survey
+    // — it is turned off after the first display.
     test('ignores the internal targeting flag for repeating surveys', () async {
       client.surveys = [
         activeSurvey(
@@ -253,7 +253,7 @@ void main() {
     });
   });
 
-  group('event orqali faollashtirish', () {
+  group('activation by event', () {
     Map<String, dynamic> eventActivated(String id, String eventName) =>
         activeSurvey(id, conditions: {
           'events': {
@@ -297,7 +297,7 @@ void main() {
     });
   });
 
-  group('qurilma turi sharti', () {
+  group('device type condition', () {
     test('shows a survey matching the current device type', () async {
       client.surveys = [
         activeSurvey('s1', conditions: {

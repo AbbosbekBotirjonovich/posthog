@@ -6,7 +6,7 @@ import 'package:posthog_dart/src/internal/posthog_queue.dart';
 import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
 import 'package:posthog_dart/src/internal/posthog_retry_policy.dart';
 
-/// Xotiradagi soxta store — disk I/O siz navbat mantiqini tekshirish uchun.
+/// In-memory fake store, for exercising the queue logic without disk I/O.
 class _FakeStore implements QueueStore {
   final Map<String, String> entries = {};
   bool failWrites = false;
@@ -144,8 +144,8 @@ void main() {
       await queue.add({'event': 'b'});
       await queue.flush();
 
-      expect(queue.length, 2, reason: 'eventlar navbatda qolishi kerak');
-      expect(store.entries.length, 2, reason: 'diskdagi nusxa saqlanishi kerak');
+      expect(queue.length, 2, reason: 'events must stay queued');
+      expect(store.entries.length, 2, reason: 'the on-disk copy must be kept');
     });
 
     test('retries a previously failed batch on the next flush', () async {
@@ -166,7 +166,7 @@ void main() {
       expect(queue.length, 1);
 
       shouldFail = false;
-      // Backoff pauzasini kutamiz (birinchi xato ~1s).
+      // Wait out the backoff pause (~1s after the first failure).
       await Future<void>.delayed(const Duration(milliseconds: 1300));
       await queue.flush();
 
@@ -174,7 +174,7 @@ void main() {
       expect(store.entries, isEmpty);
     });
 
-    // 4xx — so'rovning o'zi noto'g'ri. Qayta yuborish abadiy tsikl bo'lardi.
+    // 4xx means the request itself is wrong; resending would loop forever.
     test('drops a batch rejected with 4xx instead of looping forever',
         () async {
       final queue = buildQueue(
@@ -187,7 +187,7 @@ void main() {
 
       expect(queue.length, 0);
       expect(store.entries, isEmpty);
-      expect(sentBatches.length, 1, reason: 'qayta urinilmasligi kerak');
+      expect(sentBatches.length, 1, reason: 'must not be retried');
     });
 
     test('retries a 429 rate-limit response', () async {
@@ -199,7 +199,7 @@ void main() {
       await queue.add({'event': 'a'});
       await queue.flush();
 
-      expect(queue.length, 1, reason: '429 vaqtinchalik, saqlanishi kerak');
+      expect(queue.length, 1, reason: '429 is transient, so it must be retained');
     });
 
     test('retries a 5xx server error', () async {
@@ -243,7 +243,7 @@ void main() {
       await first.add({'event': 'b'});
       await first.add({'event': 'c'});
 
-      // Yangi navbat — ilova qayta ishga tushgani kabi.
+      // A fresh queue, as if the app had restarted.
       sentBatches = [];
       final second = buildQueue(sender: succeedingSender(), flushAt: 1000);
       await second.start();
@@ -255,7 +255,7 @@ void main() {
       expect(
         sentBatches.single.map((e) => e['event']),
         ['a', 'b', 'c'],
-        reason: 'tartib saqlanishi kerak',
+        reason: 'ordering must be preserved',
       );
 
       await second.close();
@@ -267,7 +267,7 @@ void main() {
 
       await queue.add({'event': 'a'});
 
-      // Diskka yozilmadi, lekin event yo'qolmadi.
+      // The write to disk failed, but the event was not lost.
       expect(queue.length, 1);
       expect(store.entries, isEmpty);
 
@@ -318,7 +318,7 @@ void main() {
       await queue.add({'event': 'a'});
 
       final firstFlush = queue.flush();
-      await queue.flush(); // birinchisi tugamagan — o'tkazib yuborilishi kerak
+      await queue.flush(); // the first has not finished, so this is skipped
 
       expect(callCount, 1);
 
@@ -355,7 +355,7 @@ void main() {
       expect(loaded.map((e) => e.event['event']), ['a', 'b', 'c']);
     });
 
-    // Chala yozilgan fayl navbatni abadiy band qilib turmasligi kerak.
+    // A partially written file must not occupy the queue forever.
     test('discards corrupted entries instead of failing the whole load',
         () async {
       await storage.persist('id-1', {'event': 'a'});

@@ -65,7 +65,7 @@ void main() {
       expect(result['plan'], 'pro');
     });
 
-    // Foydalanuvchi bergan property kontekstni ustidan yozishi kerak.
+    // A caller-supplied property must override the context.
     test('lets caller properties win over context', () async {
       builder.superProperties['plan'] = 'free';
 
@@ -109,7 +109,7 @@ void main() {
         expect(result[r'$feature/theme'], 'dark');
       });
 
-      // Faqat yoqilgan bayroqlar ro'yxatga kiradi.
+      // Only enabled flags make the list.
       test('lists only enabled flags as active', () async {
         builder.featureFlags = {
           'on': true,
@@ -193,7 +193,7 @@ void main() {
 
     // `$snapshot` eventlari juda tez-tez yuboriladi; ularga to'liq kontekst
     // qo'shilsa trafik keskin oshardi va backend buni kutmaydi.
-    group('appendSharedProps: false (snapshot rejimi)', () {
+    group('appendSharedProps: false (snapshot mode)', () {
       test('omits the shared context', () async {
         builder.superProperties['plan'] = 'pro';
         builder.featureFlags = {'beta': true};
@@ -209,7 +209,7 @@ void main() {
         expect(result.containsKey(r'$os_name'), isFalse);
       });
 
-      // SDK identifikatori replay eventlarida ham kerak.
+      // The SDK identity is needed on replay events too.
       test('still carries the SDK identity', () async {
         final result = await builder.build(
           eventName: r'$snapshot',

@@ -74,7 +74,7 @@ void main() {
       session.startSession();
       final id = session.sessionId;
 
-      // Har 10 daqiqada faollik — idle hech qachon yuzaga kelmaydi.
+      // Activity every 10 minutes, so it never goes idle.
       for (var i = 0; i < 6 * 24; i++) {
         now = now.add(const Duration(minutes: 10));
         session.touchSession();
@@ -83,8 +83,8 @@ void main() {
       expect(session.sessionId, isNot(id));
     });
 
-    // Fon eventlari (push, sync) allaqachon tugagan sessiyani tiriltirmasligi
-    // kerak — aks holda sessiya davomiyligi statistikasi buziladi.
+    // Background events (push, sync) must not resurrect a session that has
+    // already ended — that would skew session-duration statistics.
     test('clears rather than rotates when idle in the background', () {
       session.startSession();
       session.isAppInBackground = true;
@@ -102,7 +102,7 @@ void main() {
       now = now.add(const Duration(minutes: 20));
       session.touchSession();
 
-      // Faoliyat vaqti yangilanmagan, shuning uchun 31 daqiqada idle bo'ladi.
+      // The activity timestamp was not refreshed, so it goes idle at 31 min.
       session.isAppInBackground = false;
       now = now.add(const Duration(minutes: 11));
 

@@ -235,11 +235,11 @@ void main() {
       });
     });
 
-    // PostHog upstream'dan farq: bu guruh `PostHogLogsConfig.toMap()`
-    // serializatsiyasini tekshirardi. `toMap()` MethodChannel uchun edi va
-    // olib tashlangan, shu sababli tekshiruvlar config maydonlarining o'ziga
-    // qaratildi. Sub-soniyali `Duration`ni 1s ga yaxlitlash ham yo'q: u native
-    // API butun sonli soniyalarni kutgani uchun kerak edi.
+    // Differs from PostHog upstream: this group checked
+    // `PostHogLogsConfig.toMap()` serialization. `toMap()` existed for the
+    // MethodChannel and was removed, so the assertions target the config fields
+    // themselves. Sub-second `Duration`s are no longer rounded up to 1s either:
+    // that was needed because the native API expected whole seconds.
     group('PostHogLogsConfig', () {
       test('leaves identity fields unset and attributes empty by default', () {
         final config = PostHogConfig('test_token');

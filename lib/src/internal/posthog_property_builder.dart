@@ -58,7 +58,7 @@ class PostHogPropertyBuilder {
         for (final entry in featureFlags.entries) {
           result['\$feature/${entry.key}'] = entry.value;
           final value = entry.value;
-          // Faqat yoqilgan bayroqlar ro'yxatga kiradi: `false` — o'chirilgan.
+          // Only enabled flags make the list; `false` means disabled.
           if (value == true || (value is String && value.isNotEmpty)) {
             active.add(entry.key);
           }

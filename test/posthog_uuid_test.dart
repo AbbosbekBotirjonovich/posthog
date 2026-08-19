@@ -22,8 +22,8 @@ void main() {
       expect(ids.toSet().length, ids.length);
     });
 
-    // Bu navbatning to'g'ri ishlashi uchun hal qiluvchi: fayllar nomi bo'yicha
-    // saralanadi, shuning uchun ID vaqt bo'yicha o'suvchi bo'lishi shart.
+    // Decisive for the queue's correctness: files are sorted by name, so ids
+    // must increase over time.
     test('sorts lexicographically in generation order', () {
       final ids = List.generate(5000, (_) => PostHogUuid.generate());
       final sorted = [...ids]..sort();
@@ -50,7 +50,7 @@ void main() {
       final timestamp = PostHogUuid.timestampOf(uuid);
 
       expect(timestamp, isNotNull);
-      // Millisekundgacha aniqlik, shuning uchun chegaralar kengaytirildi.
+      // Millisecond precision, so the bounds are widened.
       expect(
         timestamp!.millisecondsSinceEpoch,
         greaterThanOrEqualTo(before.millisecondsSinceEpoch - 1),

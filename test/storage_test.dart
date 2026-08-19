@@ -7,11 +7,11 @@ import 'package:posthog_dart/src/internal/posthog_preferences.dart';
 import 'package:posthog_dart/src/internal/posthog_queue_storage.dart';
 import 'package:posthog_dart/src/internal/posthog_uuid.dart';
 
-/// Fayl tizimidagi saqlashni tekshiradi.
+/// Exercises filesystem persistence.
 ///
-/// Bu qatlam ma'lumot yo'qolishining oldini oladi: offline holatda eventlar
-/// diskda kutadi va ilova qayta ishga tushganda tiklanadi. Windows'da bu
-/// `%APPDATA%` ostida ishlaydi.
+/// This layer is what prevents data loss: while offline, events wait on disk
+/// and are restored across an app restart. On Windows it operates under
+/// `%APPDATA%`.
 void main() {
   late Directory tempDir;
 
@@ -32,7 +32,7 @@ void main() {
     }
   });
 
-  group('navbatni diskda saqlash', () {
+  group('queue persistence on disk', () {
     PostHogQueueStorage buildStorage({String queueName = 'events'}) =>
         PostHogQueueStorage(projectToken: 'tok', queueName: queueName);
 
@@ -52,13 +52,13 @@ void main() {
       final id = PostHogUuid.generate();
       await buildStorage().persist(id, {'event': 'saqlangan'});
 
-      // Ilova qayta ishga tushgani kabi.
+      // As if the app had restarted.
       final loaded = await buildStorage().loadAll();
 
       expect(loaded.single.event['event'], 'saqlangan');
     });
 
-    // Fayl nomi UUIDv7 bo'lgani uchun leksikografik saralash = xronologik
+    // Because file names are UUIDv7, lexicographic sorting equals
     // tartib. Bu buzilsa eventlar PostHog'ga chalkash ketma-ketlikda ketardi.
     test('returns events in generation order', () async {
       final storage = buildStorage();
@@ -101,7 +101,7 @@ void main() {
       expect(await storage.loadAll(), isEmpty);
     });
 
-    // Turli navbatlar (eventlar / replay) aralashmasligi kerak.
+    // Different queues (events / replay) must not mix.
     test('keeps separate queues isolated', () async {
       final events = buildStorage(queueName: 'events');
       final replay = buildStorage(queueName: 'replay');
@@ -124,7 +124,7 @@ void main() {
     });
 
     // Yozish paytida jarayon o'lsa chala fayl qolishi mumkin — u yuborilmasligi
-    // va navbatni band qilib turmasligi kerak.
+    // and must not occupy the queue.
     test('discards a corrupted event file', () async {
       final storage = buildStorage();
       final good = PostHogUuid.generate();
@@ -148,7 +148,7 @@ void main() {
 
       final dir = Directory('${tempDir.path}/posthog/tok/events');
       final leftover = File('${dir.path}/${PostHogUuid.generate()}.tmp');
-      await leftover.writeAsString('chala yozuv');
+      await leftover.writeAsString('partial write');
 
       await storage.loadAll();
 
@@ -166,7 +166,7 @@ void main() {
     });
   });
 
-  group('SDK holatini diskda saqlash', () {
+  group('SDK state persistence on disk', () {
     test('round-trips values through the file system', () async {
       final preferences = PostHogPreferences(projectToken: 'tok');
       await preferences.load();
@@ -222,8 +222,8 @@ void main() {
       expect(reloaded.getString('key'), isNull);
     });
 
-    // Buzilgan holat SDK'ni ishdan chiqarmasligi kerak — foydalanuvchi
-    // identifikatori yo'qoladi, lekin ilova ishlashda davom etadi.
+    // Corrupt state must not break the SDK — the user identifier is lost, but
+    // the app keeps working.
     test('starts empty when the stored state is corrupted', () async {
       final dir = Directory('${tempDir.path}/posthog/tok');
       await dir.create(recursive: true);
@@ -239,7 +239,7 @@ void main() {
       expect(preferences.getString('key'), 'value');
     });
 
-    // Yozish paytida jarayon o'lsa eski holat buzilmasligi kerak.
+    // If the process dies mid-write, the previous state must stay intact.
     test('writes atomically via a temp file', () async {
       final preferences = PostHogPreferences(projectToken: 'tok');
       await preferences.load();

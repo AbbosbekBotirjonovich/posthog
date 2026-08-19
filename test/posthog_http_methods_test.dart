@@ -8,14 +8,14 @@ import 'package:posthog_dart/posthog_dart.dart';
 import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
 import 'package:posthog_dart/src/posthog_http.dart';
 
-/// `PosthogHttp` ning alohida metodlarini tekshiradi: exception steps buferi,
-/// loglar, reset, feature flag baholash va bayroq so'rovining shakli.
+/// Exercises the individual `PosthogHttp` methods: the exception steps buffer,
+/// logs, reset, feature flag evaluation and the shape of the flags request.
 class _Client extends http.BaseClient {
   final List<Map<String, dynamic>> events = [];
   final List<String> paths = [];
   final List<Map<String, dynamic>> flagRequests = [];
 
-  /// `/flags` uchun qaytariladigan javob.
+  /// Response returned for `/flags`.
   Map<String, dynamic> flagsResponse = {'flags': <String, dynamic>{}};
 
   @override
@@ -161,15 +161,15 @@ void main() {
       expect(properties.containsKey(r'$exception_steps'), isFalse);
     });
 
-    // Bufer chegarasi oshganda eng eski qadamlar tashlanadi, yangilari emas —
-    // xatoga eng yaqin qadamlar qimmatliroq.
+    // When the buffer limit is exceeded the oldest steps are dropped, not the
+    // newest — the steps closest to the error are the valuable ones.
     test('drops the oldest steps once the budget is exceeded', () async {
       await setupSdk(
         configure: (c) => c.errorTrackingConfig.exceptionSteps.maxBytes = 200,
       );
 
       for (var i = 0; i < 10; i++) {
-        await Posthog().addExceptionStep('qadam-$i');
+        await Posthog().addExceptionStep('step-$i');
       }
       await Posthog().captureException(error: Exception('boom'));
       await Posthog().flush();
@@ -180,8 +180,8 @@ void main() {
       final messages = steps.map((s) => (s as Map)['message']).toList();
 
       expect(steps.length, lessThan(10));
-      expect(messages.last, 'qadam-9', reason: 'oxirgi qadam saqlanishi kerak');
-      expect(messages, isNot(contains('qadam-0')));
+      expect(messages.last, 'step-9', reason: 'the last step must be kept');
+      expect(messages, isNot(contains('step-0')));
     });
 
     test('skips a step larger than the whole budget', () async {
@@ -273,10 +273,10 @@ void main() {
 
       await Posthog().register('plan', 'pro');
       await Posthog().reset();
-      await Posthog().capture(eventName: 'keyin');
+      await Posthog().capture(eventName: 'later');
       await Posthog().flush();
 
-      final properties = (await eventNamed('keyin'))!['properties'] as Map;
+      final properties = (await eventNamed('later'))!['properties'] as Map;
       expect(properties.containsKey('plan'), isFalse);
     });
 
@@ -285,10 +285,10 @@ void main() {
 
       await Posthog().group(groupType: 'company', groupKey: 'acme');
       await Posthog().reset();
-      await Posthog().capture(eventName: 'keyin');
+      await Posthog().capture(eventName: 'later');
       await Posthog().flush();
 
-      final properties = (await eventNamed('keyin'))!['properties'] as Map;
+      final properties = (await eventNamed('later'))!['properties'] as Map;
       expect(properties.containsKey(r'$groups'), isFalse);
     });
 
@@ -367,11 +367,11 @@ void main() {
 
       expect(await Posthog().isFeatureEnabled('yoq'), isFalse);
       expect(await Posthog().getFeatureFlag('yoq'), isNull);
-      expect(await Posthog().getFeatureFlagResult('yoq'), isNull);
+      expect(await Posthog().getFeatureFlagResult('missing'), isNull);
     });
 
-    // Tez-tez tekshiriladigan bayroq minglab keraksiz event hosil qilmasligi
-    // kerak.
+    // A frequently checked flag must not generate thousands of pointless
+    // events.
     test('sends the called event only once per flag', () async {
       client.flagsResponse = {
         'flags': {
@@ -485,7 +485,7 @@ void main() {
       expect(groupProperties.containsKey('team'), isTrue);
     });
 
-    // Kvota tugaganda oxirgi ma'lum qiymatlar saqlanishi kerak.
+    // When the quota runs out the last known values must be retained.
     test('keeps cached flags when the quota is exhausted', () async {
       client.flagsResponse = {
         'flags': {
@@ -503,7 +503,7 @@ void main() {
     });
   });
 
-  group('session replay holati', () {
+  group('session replay state', () {
     test('is inactive when session replay is off', () async {
       await setupSdk(configure: (c) => c.sessionReplay = false);
 

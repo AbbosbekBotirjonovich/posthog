@@ -12,7 +12,7 @@ import 'package:posthog_dart/src/replay/native_communicator.dart';
 
 /// Replay pipeline'ini transportga ulovchi qatlamni tekshiradi.
 ///
-/// Rasmiy plaginda bu klass MethodChannel orqali native SDK'ga murojaat
+/// In the official plugin this class called into the native SDK over the
 /// qilardi; bu yerda u `PosthogHttp` ga yo'naltiriladi va `$snapshot` eventi
 /// Dart'da quriladi.
 class _Client extends http.BaseClient {
@@ -117,7 +117,7 @@ void main() {
       final data = (snapshot['properties'] as Map)[r'$snapshot_data'] as List;
       final event = data.single as Map;
 
-      expect(event['type'], 4, reason: 'rrweb meta turi');
+      expect(event['type'], 4, reason: 'rrweb meta type');
       expect((event['data'] as Map)['width'], 390);
       expect((event['data'] as Map)['href'], 'Checkout');
     });
@@ -137,7 +137,7 @@ void main() {
       final data = (snapshot['properties'] as Map)[r'$snapshot_data'] as List;
       final event = data.single as Map;
 
-      expect(event['type'], 2, reason: 'rrweb full snapshot turi');
+      expect(event['type'], 2, reason: 'rrweb full snapshot type');
 
       final wireframe =
           ((event['data'] as Map)['wireframes'] as List).single as Map;
@@ -171,7 +171,7 @@ void main() {
       expect(client.paths, contains('/s/'));
     });
 
-    // Replay o'chirilganda hech nima yuborilmasligi kerak — aks holda
+    // Nothing may be sent while replay is off — otherwise
     // foydalanuvchi so'ramagan trafik ketardi.
     test('sends nothing when session replay is off', () async {
       await setupSdk(sessionReplay: false);
@@ -212,10 +212,10 @@ void main() {
     });
   });
 
-  // Bu ikkita imkoniyat native SDK'ni talab qiladi. Chaqiruvchi kod ularning
-  // "yo'q" javobini qo'llab-quvvatlaydi: platform view qora maska bilan
+  // These two capabilities require the native SDK. The calling code handles
+  // their "unavailable" answer: the platform view is covered with a black mask
   // qoplanadi, occlusion esa placeholder kadrga tushadi.
-  group('native imkoniyatlar mavjud emas', () {
+  group('native capabilities are unavailable', () {
     test('native screenshots return null placeholders', () async {
       final result = await communicator.captureNativeScreenshots([
         {'x': 0, 'y': 0, 'width': 10, 'height': 10},

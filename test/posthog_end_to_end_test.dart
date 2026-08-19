@@ -11,10 +11,10 @@ import 'package:posthog_dart/src/posthog_http.dart';
 /// So'rovlarni ushlab qoluvchi klient.
 ///
 /// `TestWidgetsFlutterBinding` haqiqiy soketlarni bloklaydi (barcha so'rovga
-/// 400 qaytaradi), shuning uchun bu yerda tarmoq emas, **SDK zanjirining
-/// o'zi** sinovdan o'tkaziladi: `Posthog()` fasadidan boshlab yakuniy JSON
-/// payload'gacha. Tarmoq qatlami `posthog_http_test.dart` da alohida
-/// tekshiriladi.
+/// 400 to every request), so what is exercised here is not the network but
+/// **the SDK chain itself**: from the `Posthog()` facade down to the final JSON
+/// payload. The network layer is covered separately in
+/// `posthog_http_test.dart`.
 class _CapturingClient extends http.BaseClient {
   final List<Map<String, dynamic>> events = [];
   final List<String> paths = [];
@@ -49,19 +49,18 @@ class _CapturingClient extends http.BaseClient {
 
 /// SDK'ni haqiqiy HTTP serverga qarshi uchidan-uchiga sinovdan o'tkazadi.
 ///
-/// Bu birlik testlaridan farq qiladi: bu yerda `Posthog()` fasadidan boshlab
-/// haqiqiy soket orqali yuborilgan JSON'gacha butun zanjir ishlaydi. Faqat
-/// shu daraja `setup()` da bir necha bog'liqlikni noto'g'ri ulashdek xatolarni
-/// ushlaydi.
+/// This differs from the unit tests: the entire chain runs, from the
+/// `Posthog()` facade to the JSON handed to the transport. Only at this level
+/// do mistakes such as wiring a dependency incorrectly in `setup()` show up.
 void main() {
   late _CapturingClient client;
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Test muhitida platforma plaginlari yo'q. SDK ularsiz ham ishlaydi
-    // (xatolar yutiladi), lekin ularni mock qilish diskda saqlash yo'lini
-    // ham sinovdan o'tkazadi.
+    // Platform plugins are absent in the test environment. The SDK works
+    // without them (errors are swallowed), but mocking them also exercises the
+    // persistence path.
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -99,7 +98,7 @@ void main() {
     await Posthog().setup(config);
   }
 
-  /// Eventlar navbat orqali asinxron yuboriladi.
+  /// Events are sent asynchronously through the queue.
   Future<void> waitForEvents(int count) async {
     for (var i = 0; i < 60; i++) {
       if (client.events.length >= count) return;
@@ -128,8 +127,8 @@ void main() {
       expect((event['properties'] as Map)['summa'], 42.5);
     });
 
-    // Windows'da bu qiymatlar birinchi marta to'ldirildi — rasmiy plaginda
-    // platforma umuman qo'llab-quvvatlanmagani uchun ular yo'q edi.
+    // These values are populated for the first time on Windows — the official
+    // plugin did not support the platform at all, so they were absent.
     test('attaches platform context to every event', () async {
       await setupSdk();
 
@@ -300,8 +299,8 @@ void main() {
     test('every event in a session shares one session id', () async {
       await setupSdk();
 
-      await Posthog().capture(eventName: 'birinchi');
-      await Posthog().capture(eventName: 'ikkinchi');
+      await Posthog().capture(eventName: 'first');
+      await Posthog().capture(eventName: 'second');
       await Posthog().flush();
       await waitForEvents(2);
 

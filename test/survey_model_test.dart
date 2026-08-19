@@ -11,8 +11,8 @@ void main() {
       };
 
   group('PostHogDisplaySurvey.fromDict', () {
-    // PostHog upstream'da `id` xato ravishda `type` dan o'qilardi, natijada
-    // javob kalitlari (`$survey_response_<id>`) savol turini o'z ichiga
+    // PostHog upstream mistakenly read `id` from `type`, so the response keys
+    // (`$survey_response_<id>`) ended up containing the question type
     // olardi va bir xil turdagi savollar bir-birini bosardi.
     test('reads the question id from the id field, not the type', () {
       final survey = PostHogDisplaySurvey.fromDict(
@@ -61,7 +61,7 @@ void main() {
       expect(survey.questions.single.id, '');
     });
 
-    // Kutilmagan payload butun so'rovnomani crash qilmasligi kerak: rasmiy
+    // An unexpected payload must not crash the whole survey: the official
     // plaginda bu maydonlar non-null cast edi.
     group('resilience to incomplete payloads', () {
       test('defaults isOptional when missing', () {

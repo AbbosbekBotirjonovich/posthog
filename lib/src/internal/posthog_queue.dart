@@ -7,7 +7,7 @@ import 'posthog_queue_storage.dart';
 import 'posthog_retry_policy.dart';
 import 'posthog_uuid.dart';
 
-/// Navbatdagi bitta yozuv.
+/// A single entry in the queue.
 class _QueueEntry {
   _QueueEntry({required this.id, required this.event});
 
@@ -40,7 +40,7 @@ class PostHogQueue {
         _storage = storage,
         _retryPolicy = retryPolicy ?? PostHogRetryPolicy();
 
-  /// Navbat nomi — log xabarlarida ishlatiladi.
+  /// Queue name, used in log messages.
   final String name;
 
   final BatchSender _sender;
@@ -53,7 +53,7 @@ class PostHogQueue {
   /// Navbatning maksimal hajmi. Oshsa eng eski eventlar tashlanadi.
   final int maxQueueSize;
 
-  /// Bitta so'rovdagi maksimal event soni.
+  /// Maximum number of events per request.
   final int maxBatchSize;
 
   /// Davriy flush oralig'i.
@@ -104,8 +104,8 @@ class PostHogQueue {
     _queue.add(_QueueEntry(id: id, event: event));
     await _storage.persist(id, event);
 
-    // Navbat to'lib ketdi: eng eskilarini tashlaymiz. Yangi eventlar
-    // odatda qimmatroq, chunki ular joriy holatni aks ettiradi.
+    // The queue is full, so the oldest entries are dropped. Newer events are
+    // usually more valuable, because they reflect the current state.
     if (_queue.length > maxQueueSize) {
       final dropped = <String>[];
       while (_queue.length > maxQueueSize) {

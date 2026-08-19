@@ -28,7 +28,7 @@ class PostHogQueueStorage {
   /// Project token, which keeps queues for different projects apart.
   final String projectToken;
 
-  /// Navbat nomi: `events`, `replay`, `logs`.
+  /// Queue name: `events`, `replay` or `logs`.
   final String queueName;
 
   final QueueStore _store;
@@ -90,7 +90,7 @@ class PostHogQueueStorage {
     }
   }
 
-  /// Yuborilgan yoki tashlab yuborilgan eventlarni o'chiradi.
+  /// Deletes events that were sent or dropped.
   Future<void> remove(Iterable<String> ids) async {
     try {
       await _ensureInitialized();

@@ -8,18 +8,17 @@ import 'package:posthog_dart/posthog_dart.dart';
 import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
 import 'package:posthog_dart/src/posthog_http.dart';
 
-/// Offline holatda ma'lumot yo'qolmasligini tekshiradi.
+/// Verifies that no data is lost while offline.
 ///
-/// Bu SDK'ning eng muhim kafolati: tarmoq yo'q bo'lganda eventlar diskda
-/// kutadi, ilova qayta ishga tushsa ham saqlanadi va tarmoq qaytgach
-/// yuboriladi.
+/// This is the SDK's most important guarantee: with no network, events wait on
+/// disk, survive an app restart, and are sent once connectivity returns.
 class _Client extends http.BaseClient {
   final List<Map<String, dynamic>> events = [];
 
-  /// Tarmoq holati: `false` bo'lganda so'rovlar muvaffaqiyatsiz bo'ladi.
+  /// Network state: requests fail while this is `false`.
   bool online = true;
 
-  /// Serverning javob kodi (`online` true bo'lganda).
+  /// The server's response code (while `online` is true).
   int statusCode = 200;
 
   int requestCount = 0;
@@ -29,7 +28,7 @@ class _Client extends http.BaseClient {
     requestCount++;
 
     if (!online) {
-      throw const SocketException('tarmoq mavjud emas');
+      throw const SocketException('network unavailable');
     }
 
     if (request is http.Request && request.body.isNotEmpty) {
@@ -57,7 +56,7 @@ void main() {
   late _Client client;
   late Directory tempDir;
 
-  /// Bir xil diskdan foydalanuvchi yangi SDK instansiyasi — ilovaning qayta
+  /// A new SDK instance sharing the same disk — simulates the app being
   /// ishga tushishini modellaydi.
   Future<void> launchSdk({int flushAt = 1}) async {
     client = _Client()..online = client.online;
@@ -75,7 +74,7 @@ void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Bir xil katalog — ilova qayta ishga tushganda navbat saqlanadi.
+    // The same directory, so the queue survives an app restart.
     tempDir = await Directory.systemTemp.createTemp('posthog_offline');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -106,14 +105,14 @@ void main() {
   Future<void> settle() =>
       Future<void>.delayed(const Duration(milliseconds: 150));
 
-  /// Retry backoff pauzasi tugashini kutadi.
+  /// Waits out the retry backoff pause.
   ///
-  /// Muvaffaqiyatsizlikdan keyin navbat ~1s pauza qiladi (eksponensial
-  /// backoff + jitter), shuning uchun tarmoq qaytgach darhol yuborilmaydi.
+  /// After a failure the queue pauses for ~1s (exponential backoff plus
+  /// jitter), so nothing is sent the instant the network returns.
   Future<void> waitOutBackoff() =>
       Future<void>.delayed(const Duration(milliseconds: 1600));
 
-  /// Berilgan event yetib borishini kutadi.
+  /// Waits for the given event to arrive.
   Future<bool> waitForEvent(String name) async {
     for (var i = 0; i < 40; i++) {
       if (client.events.any((e) => e['event'] == name)) return true;
@@ -131,9 +130,9 @@ void main() {
     await Posthog().flush();
     await settle();
 
-    expect(client.events, isEmpty, reason: 'offline: yetib bormasligi kerak');
+    expect(client.events, isEmpty, reason: 'offline: must not arrive');
 
-    // Tarmoq qaytdi. Navbat backoff pauzasida, shuning uchun kutamiz.
+    // The network is back. The queue is in its backoff pause, so wait.
     client.online = true;
     await waitOutBackoff();
     await Posthog().flush();
@@ -142,8 +141,8 @@ void main() {
     expect(await waitForEvent('offline_event'), isTrue);
   });
 
-  // Eng muhim holat: ilova offline'da yopilib, keyin qayta ochilganda
-  // eventlar hali ham yuborilishi kerak.
+  // The most important case: the app is closed while offline and reopened,
+  // and the events must still be delivered.
   test('offline events survive an app restart', () async {
     await launchSdk();
     client.online = false;
@@ -153,10 +152,10 @@ void main() {
     await Posthog().flush();
     await settle();
 
-    // Ilova yopildi.
+    // The app was closed.
     await Posthog().close();
 
-    // Ilova qayta ochildi, tarmoq bor.
+    // The app reopened, with a network.
     client.online = true;
     await launchSdk();
     await Posthog().flush();
@@ -213,11 +212,11 @@ void main() {
     expect(properties['raqam'], 42);
     expect(properties['ichma_ich'], {'a': 1});
     expect(properties['royxat'], [1, 2, 3]);
-    // Kontekst ham saqlangan bo'lishi kerak.
+    // The context must be preserved too.
     expect(properties[r'$session_id'], isNotNull);
   });
 
-  // Server xatosi vaqtinchalik — eventlar saqlanishi kerak.
+  // A server error is transient, so events must be retained.
   test('a 5xx response keeps events queued', () async {
     await launchSdk();
     client.statusCode = 503;
@@ -236,8 +235,8 @@ void main() {
     expect(await waitForEvent('server_xatosi'), isTrue);
   });
 
-  // 4xx — so'rovning o'zi noto'g'ri. Qayta yuborish abadiy tsikl bo'lardi,
-  // shuning uchun event tashlanadi.
+  // 4xx means the request itself is wrong. Resending would loop forever, so
+  // the event is dropped.
   test('a 4xx response drops the batch instead of looping', () async {
     await launchSdk();
     client.statusCode = 400;
@@ -254,7 +253,7 @@ void main() {
     expect(
       client.requestCount,
       countAfterFirst,
-      reason: 'qayta urinilmasligi kerak',
+      reason: 'must not be retried',
     );
   });
 
@@ -284,11 +283,11 @@ void main() {
     await Posthog().close();
 
     await launchSdk();
-    await Posthog().capture(eventName: 'keyin');
+    await Posthog().capture(eventName: 'after_restart');
     await Posthog().flush();
     await settle();
 
-    final event = client.events.firstWhere((e) => e['event'] == 'keyin');
+    final event = client.events.firstWhere((e) => e['event'] == 'after_restart');
     expect((event['properties'] as Map)['plan'], 'pro');
   });
 }

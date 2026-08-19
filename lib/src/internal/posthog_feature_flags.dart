@@ -34,13 +34,13 @@ class PostHogFeatureFlags {
   static const _flagsKey = 'posthog.featureFlags';
   static const _payloadsKey = 'posthog.featureFlagPayloads';
 
-  /// Bayroq qiymatlari: `bool` yoki variant nomi (`String`).
+  /// Flag values: a `bool`, or a variant name (`String`).
   final Map<String, Object> _flags = {};
 
   /// Bayroqlarga biriktirilgan JSON payload'lar.
   final Map<String, Object?> _payloads = {};
 
-  /// Bayroqlarni baholashda yuboriladigan shaxs property'lari.
+  /// Person properties sent when evaluating the flags.
   final Map<String, Object> personProperties = {};
 
   /// Guruh property'lari.
@@ -158,7 +158,7 @@ class PostHogFeatureFlags {
       return;
     }
 
-    // Eskiroq javob shakli: `featureFlags` + `featureFlagPayloads`.
+    // Older response shape: `featureFlags` + `featureFlagPayloads`.
     final legacyFlags = response['featureFlags'];
     if (legacyFlags is Map) {
       _flags.clear();

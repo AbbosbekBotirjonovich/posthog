@@ -6,7 +6,7 @@ import 'package:image/image.dart' as img;
 import 'package:posthog_dart/src/internal/replay/rrweb_models.dart';
 import 'package:posthog_dart/src/internal/replay/snapshot_sender.dart';
 
-/// Kichik haqiqiy PNG yasaydi — dekodlash yo'lini sinash uchun.
+/// Builds a small real PNG, to exercise the decoding path.
 Uint8List makePng(int width, int height) {
   final image = img.Image(width: width, height: height);
   img.fill(image, color: img.ColorRgb8(120, 60, 200));
@@ -15,7 +15,7 @@ Uint8List makePng(int width, int height) {
 
 void main() {
   group('rrweb event shakli', () {
-    // Bu qiymatlar backend kutgani bilan aynan mos bo'lishi shart.
+    // These values must match exactly what the backend expects.
     test('uses the documented rrweb type numbers', () {
       expect(RREventType.fullSnapshot, 2);
       expect(RREventType.incrementalSnapshot, 3);
@@ -146,13 +146,13 @@ void main() {
       final wireframe =
           ((event['data'] as Map)['wireframes'] as List).single as Map;
       expect(wireframe['id'], 5);
-      // O'lchamlar rasmdan olinadi, chaqiruvchidan emas.
+      // The dimensions come from the image, not from the caller.
       expect(wireframe['width'], 40);
       expect(wireframe['height'], 30);
     });
 
-    // Flutter PNG chiqaradi (lossless, katta). Native SDK uni JPEG'ga
-    // qayta kodlardi — trafikni bir necha barobar kamaytiradi.
+    // Flutter produces PNG (lossless, large). The native SDK re-encoded it as
+    // JPEG, cutting traffic by several times.
     test('re-encodes the frame as JPEG', () async {
       await sender.sendFullSnapshot(makePng(40, 30), id: 1, x: 0, y: 0);
 
@@ -175,7 +175,7 @@ void main() {
       expect(wireframe['y'], 25);
     });
 
-    // Buzuq kadr SDK'ni yiqitmasligi kerak.
+    // A corrupt frame must not bring the SDK down.
     test('drops an undecodable frame without throwing', () async {
       await sender.sendFullSnapshot(
         Uint8List.fromList([1, 2, 3, 4]),

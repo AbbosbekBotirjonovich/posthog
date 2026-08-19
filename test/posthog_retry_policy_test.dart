@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:posthog_dart/src/internal/posthog_retry_policy.dart';
 
-/// Jitter'ni nolga tushiruvchi Random — kechikishlarni aniq tekshirish uchun.
+/// A Random that zeroes out jitter, so delays can be asserted exactly.
 class _ZeroRandom implements Random {
   @override
   bool nextBool() => false;
@@ -81,7 +81,7 @@ void main() {
       expect(policy.onFailure(now: now), const Duration(milliseconds: 1250));
     });
 
-    // Server o'z yukini biladi, shuning uchun Retry-After har doim ustuvor.
+    // The server knows its own load, so Retry-After always wins.
     test('honors Retry-After over the computed backoff', () {
       final policy = PostHogRetryPolicy(random: _ZeroRandom());
       final now = DateTime(2026, 1, 1);
@@ -147,7 +147,7 @@ void main() {
 
       expect(policy.failureCount, 0);
       expect(policy.canAttempt(now: now), isTrue);
-      // Backoff nolga qaytdi: keyingi xato yana 1 soniyadan boshlanadi.
+      // The backoff is reset: the next failure starts from 1s again.
       expect(policy.onFailure(now: now), const Duration(seconds: 1));
     });
   });

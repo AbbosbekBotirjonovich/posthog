@@ -388,7 +388,8 @@ void main() {
       expect(tail[2]['package'], 'my_app');
       expect(tail[2]['filename'], 'main.dart');
       // Interior PostHog frame is preserved (only leading ones are stripped).
-      // PostHog upstream'dan farq: paket nomi `posthog_flutter` emas, `posthog`.
+      // Differs from PostHog upstream: the package is `posthog_dart`, not
+      // `posthog_flutter`.
       expect(tail[1]['package'], 'posthog_dart');
       expect(tail[1]['filename'], 'posthog.dart');
       // Entry point is first of the three.

@@ -9,14 +9,14 @@ import 'package:posthog_dart/src/posthog_flutter_platform_interface.dart';
 import 'package:posthog_dart/src/posthog_http.dart';
 import 'package:posthog_dart/src/surveys/models/posthog_display_survey.dart';
 
-/// So'rovnoma javob oqimini tekshiradi: javoblarni to'plash, branching orqali
-/// keyingi savolni tanlash, `survey shown` / `survey sent` / `survey dismissed`
-/// eventlarini to'g'ri kalitlar bilan yuborish.
+/// Exercises the survey response flow: collecting answers, picking the next
+/// question through branching, and emitting `survey shown` / `survey sent` /
+/// `survey dismissed` with the right keys.
 ///
-/// Callback'lar to'g'ridan-to'g'ri chaqiriladi, modal UI orqali emas:
-/// `SurveyService.showSurvey()` modal yopilgunicha `await` qiladi, shuning
-/// uchun uni widget testida uchidan-uchiga haydash testni bloklaydi. Modal
-/// oynaning o'zi `surveys_test.dart` da alohida qoplangan.
+/// The callbacks are invoked directly rather than through the modal UI:
+/// `SurveyService.showSurvey()` awaits until the modal closes, so driving it
+/// end-to-end from a widget test would block. The modal itself is covered
+/// separately in `surveys_test.dart`.
 class _CapturingClient extends http.BaseClient {
   final List<Map<String, dynamic>> events = [];
 
@@ -84,7 +84,7 @@ void main() {
     await Posthog().close();
   });
 
-  /// Ochiq savollardan iborat so'rovnoma; ixtiyoriy branching bilan.
+  /// A survey of open questions, with optional branching.
   PostHogDisplaySurvey buildSurvey({
     required int questionCount,
     Map<int, Map<String, dynamic>> branching = const {},
@@ -98,7 +98,7 @@ void main() {
             {
               'id': 'q$i',
               'type': 'open',
-              'question': 'Savol $i',
+              'question': 'Question $i',
               'isOptional': false,
               if (branching.containsKey(i)) 'branching': branching[i],
             },
@@ -154,42 +154,42 @@ void main() {
       expect(await eventNamed('survey sent'), isNull);
     });
 
-    // Birinchi javob `$survey_response`, qolganlari indeksli kalit oladi —
+    // The first answer uses `$survey_response`, the rest use indexed keys —
     // PostHog backend shu konvensiyani kutadi.
     test('keys the first answer without an index', () async {
       final survey = buildSurvey(questionCount: 1);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Birinchi javob');
+      await sdk.onSurveyResponse(survey, 0, 'First answer');
       await Posthog().flush();
 
       final properties = await propertiesOf('survey sent');
-      expect(properties[r'$survey_response'], 'Birinchi javob');
+      expect(properties[r'$survey_response'], 'First answer');
     });
 
     test('keys later answers by index', () async {
       final survey = buildSurvey(questionCount: 2);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Javob A');
-      await sdk.onSurveyResponse(survey, 1, 'Javob B');
+      await sdk.onSurveyResponse(survey, 0, 'Answer A');
+      await sdk.onSurveyResponse(survey, 1, 'Answer B');
       await Posthog().flush();
 
       final properties = await propertiesOf('survey sent');
-      expect(properties[r'$survey_response'], 'Javob A');
-      expect(properties[r'$survey_response_1'], 'Javob B');
+      expect(properties[r'$survey_response'], 'Answer A');
+      expect(properties[r'$survey_response_1'], 'Answer B');
     });
 
-    // Savol id'si bo'yicha kalit ham yuboriladi: turli hisobotlar
+    // A key by question id is sent as well: different reports
     // turlichasini kutadi.
     test('also keys answers by question id', () async {
       final survey = buildSurvey(questionCount: 2);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Javob A');
-      await sdk.onSurveyResponse(survey, 1, 'Javob B');
+      await sdk.onSurveyResponse(survey, 0, 'Answer A');
+      await sdk.onSurveyResponse(survey, 1, 'Answer B');
       await Posthog().flush();
 
       final properties = await propertiesOf('survey sent');
-      expect(properties[r'$survey_response_q0'], 'Javob A');
-      expect(properties[r'$survey_response_q1'], 'Javob B');
+      expect(properties[r'$survey_response_q0'], 'Answer A');
+      expect(properties[r'$survey_response_q1'], 'Answer B');
     });
 
     test('includes the question manifest', () async {
@@ -204,14 +204,14 @@ void main() {
 
       expect(questions.length, 2);
       expect((questions.first as Map)['id'], 'q0');
-      expect((questions.first as Map)['question'], 'Savol 0');
+      expect((questions.first as Map)['question'], 'Question 0');
       expect((questions.first as Map)['response'], 'A');
     });
 
     test('marks the person as having responded', () async {
       final survey = buildSurvey(questionCount: 1);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Javob');
+      await sdk.onSurveyResponse(survey, 0, 'Answer');
       await Posthog().flush();
 
       final properties = await propertiesOf('survey sent');
@@ -233,8 +233,8 @@ void main() {
   });
 
   group('branching', () {
-    // Branching zanjiri uzilgan bo'lsa bu test tushadi: so'rovnoma birinchi
-    // savoldan keyin tugashi o'rniga ikkinchisiga o'tardi.
+    // This test fails if the branching chain is broken: the survey moved to
+    // the second question instead of ending after the first.
     test('an end condition completes after the first answer', () async {
       final survey = buildSurvey(
         questionCount: 3,
@@ -263,7 +263,7 @@ void main() {
       );
       sdk.onSurveyShown(survey);
 
-      final next = await sdk.onSurveyResponse(survey, 0, 'Birinchi');
+      final next = await sdk.onSurveyResponse(survey, 0, 'First');
 
       expect(next.questionIndex, 2);
       expect(next.isSurveyCompleted, isFalse);
@@ -312,14 +312,14 @@ void main() {
     test('marks a partially completed dismissal', () async {
       final survey = buildSurvey(questionCount: 3);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Yarim javob');
+      await sdk.onSurveyResponse(survey, 0, 'Partial answer');
 
       sdk.onSurveyClosed(survey);
       await Posthog().flush();
 
       final properties = await propertiesOf('survey dismissed');
       expect(properties[r'$survey_partially_completed'], isTrue);
-      expect(properties[r'$survey_response'], 'Yarim javob');
+      expect(properties[r'$survey_response'], 'Partial answer');
     });
 
     test('marks the person as having dismissed', () async {
@@ -334,12 +334,12 @@ void main() {
       expect(personProperties[r'$survey_dismissed/survey-1'], isTrue);
     });
 
-    // `survey sent` yuborilgandan keyin yopilish `survey dismissed`
-    // yubormasligi kerak — aks holda bitta so'rovnoma ikki marta hisoblanardi.
+    // Closing after `survey sent` must not also emit `survey dismissed` —
+    // otherwise a single survey would be counted twice.
     test('does not emit dismissed after the survey was sent', () async {
       final survey = buildSurvey(questionCount: 1);
       sdk.onSurveyShown(survey);
-      await sdk.onSurveyResponse(survey, 0, 'Javob');
+      await sdk.onSurveyResponse(survey, 0, 'Answer');
 
       sdk.onSurveyClosed(survey);
       await Posthog().flush();

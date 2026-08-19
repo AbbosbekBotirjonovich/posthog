@@ -161,9 +161,9 @@ void main() {
   });
 
   group('PostHogConfig', () {
-    // PostHog upstream'dan farq: bu guruhdagi testlar `toMap()` serializatsiyasini
-    // ham tekshirardi. `toMap()` MethodChannel uchun edi va olib tashlangan, shu
-    // sababli tekshiruvlar config qiymatlarining o'ziga qaratildi.
+    // Differs from PostHog upstream: these tests also checked `toMap()`
+    // serialization. `toMap()` existed for the MethodChannel and was removed, so
+    // the assertions target the config values themselves.
     test('trims whitespace-sensitive config values', () {
       final config = PostHogConfig(' \n test_project_token\t ');
       config.host = ' \nhttps://eu.i.posthog.com/\t ';
@@ -804,10 +804,9 @@ void main() {
       expect(config.pushIdentityProvider, isNull);
     });
 
-    // PostHog upstream'dan farq: bu yerda `toMap()` serializatsiyasi
-    // tekshirilardi. Push notification'lar sof Dart implementatsiyasida
-    // qo'llab-quvvatlanmaydi (native SDK talab qiladi), shuning uchun faqat
-    // config maydonlarining o'zgarishi tekshiriladi.
+    // Differs from PostHog upstream: this checked `toMap()` serialization.
+    // Push notifications are not supported in the pure-Dart implementation
+    // (they require the native SDK), so only the config fields are asserted.
     test('honors overridden push notification flags', () {
       final withOverrides = PostHogConfig('test_project_token')
         ..capturePushNotificationSubscriptions = false

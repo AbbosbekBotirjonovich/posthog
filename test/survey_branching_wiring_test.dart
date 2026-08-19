@@ -6,7 +6,7 @@ import 'package:posthog_dart/src/surveys/models/survey_callbacks.dart';
 /// Branching payload'dan modelgacha va undan `SurveyBranching` gacha
 /// yetib borishini tekshiradi.
 ///
-/// Bu zanjir avval uzilgan edi: `SurveyBranching` to'liq yozilgan bo'lsa-da,
+/// This chain used to be broken: `SurveyBranching` was fully written, but
 /// modelda `branching` maydoni yo'qligi sababli unga hech qachon haqiqiy
 /// shart yetib bormasdi va barcha so'rovnomalar ketma-ket o'tardi.
 void main() {
@@ -128,7 +128,7 @@ void main() {
       );
 
       for (final q in survey.questions) {
-        expect(q.branching, {'type': 'end'}, reason: '${q.id} uchun');
+        expect(q.branching, {'type': 'end'}, reason: 'for ${q.id}');
       }
     });
   });
@@ -157,10 +157,10 @@ void main() {
         ]),
       );
 
-      final next = resolve(survey, 0, 'javob');
+      final next = resolve(survey, 0, 'answer');
 
       expect(next.isSurveyCompleted, isTrue,
-          reason: 'end sharti so\'rovnomani tugatishi kerak');
+          reason: 'an end rule must finish the survey');
     });
 
     test('a specific_question condition skips ahead', () {
@@ -172,9 +172,9 @@ void main() {
         ]),
       );
 
-      final next = resolve(survey, 0, 'javob');
+      final next = resolve(survey, 0, 'answer');
 
-      expect(next.questionIndex, 2, reason: 'q2 o\'tkazib yuborilishi kerak');
+      expect(next.questionIndex, 2, reason: 'q2 must be skipped');
       expect(next.isSurveyCompleted, isFalse);
     });
 
@@ -199,7 +199,7 @@ void main() {
         surveyWith([question('q1'), question('q2')]),
       );
 
-      final next = resolve(survey, 0, 'javob');
+      final next = resolve(survey, 0, 'answer');
 
       expect(next.questionIndex, 1);
       expect(next.isSurveyCompleted, isFalse);
