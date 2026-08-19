@@ -4,8 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:posthog_dart/posthog_dart.dart';
 
-/// Loyiha tokeni. Haqiqiy token bilan almashtiring yoki `--dart-define` bilan
-/// bering:
+/// Project token. Replace it with a real one, or pass it via `--dart-define`:
 ///
 /// ```
 /// flutter run -d windows --dart-define=POSTHOG_KEY=phc_xxx
@@ -25,15 +24,15 @@ Future<void> main() async {
 
   if (_projectToken.isEmpty) {
     debugPrint(
-      'POSTHOG_KEY berilmagan — SDK ishga tushmaydi. '
-      'Ishga tushirish: flutter run --dart-define=POSTHOG_KEY=phc_xxx',
+      'POSTHOG_KEY was not provided — the SDK will not start. '
+      'Run with: flutter run --dart-define=POSTHOG_KEY=phc_xxx',
     );
   } else {
     final config = PostHogConfig(_projectToken)
       ..host = _host
       ..debug = true
       ..captureApplicationLifecycleEvents = true
-      // Kichik qiymat — namunada eventlar darhol yuborilsin.
+      // A small value so events are sent immediately in the example.
       ..flushAt = 1;
 
     await Posthog().setup(config);
@@ -47,12 +46,12 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Session replay uchun butun ilova PostHogWidget bilan o'raladi.
+    // The whole app is wrapped in PostHogWidget for session replay.
     return PostHogWidget(
       child: MaterialApp(
         title: 'PostHog example',
         theme: ThemeData(colorSchemeSeed: Colors.indigo),
-        // Ekran ko'rishlarini avtomatik yig'adi.
+        // Collects screen views automatically.
         navigatorObservers: [PosthogObserver()],
         home: const HomePage(),
       ),
@@ -68,7 +67,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _status = 'Tayyor';
+  String _status = 'Ready';
   String _distinctId = '';
   String _sessionId = '';
 
@@ -84,7 +83,7 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     setState(() {
       _distinctId = distinctId;
-      _sessionId = sessionId ?? '(yo\'q)';
+      _sessionId = sessionId ?? '(none)';
     });
   }
 
@@ -118,7 +117,7 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Holat: $_status'),
+                  Text('Status: $_status'),
                   const SizedBox(height: 8),
                   Text('distinct_id: $_distinctId'),
                   Text('session_id: $_sessionId'),
@@ -135,7 +134,7 @@ class _HomePageState extends State<HomePage> {
                 properties: {'manba': 'example', 'platforma': _platformName},
               ),
             ),
-            child: const Text('Event yuborish'),
+            child: const Text('Send event'),
           ),
           const SizedBox(height: 8),
           FilledButton.tonal(
@@ -152,20 +151,20 @@ class _HomePageState extends State<HomePage> {
           FilledButton.tonal(
             onPressed: () => _run(
               'screen',
-              () => Posthog().screen(screenName: 'Sozlamalar'),
+              () => Posthog().screen(screenName: 'Settings'),
             ),
-            child: const Text('Screen eventi'),
+            child: const Text('Screen event'),
           ),
           const SizedBox(height: 8),
           FilledButton.tonal(
             onPressed: () => _run('exception', () async {
               try {
-                throw StateError('Namuna uchun ataylab chiqarilgan xato');
+                throw StateError('Deliberate error for the example');
               } catch (e, s) {
                 await Posthog().captureException(error: e, stackTrace: s);
               }
             }),
-            child: const Text('Xato yuborish'),
+            child: const Text('Send error'),
           ),
           const SizedBox(height: 8),
           FilledButton.tonal(
@@ -174,12 +173,12 @@ class _HomePageState extends State<HomePage> {
               if (!mounted) return;
               setState(() => _status = 'example-flag: $enabled');
             }),
-            child: const Text('Feature flag tekshirish'),
+            child: const Text('Check feature flag'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: () => _run('flush', () => Posthog().flush()),
-            child: const Text('Flush (darhol yuborish)'),
+            child: const Text('Flush (send now)'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
@@ -194,14 +193,14 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Maskalash namunasi',
+                    'Masking example',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 8),
-                  Text('Quyidagi matn session replay\'da qora bilan qoplanadi:'),
+                  Text('The text below is blacked out in session replay:'),
                   SizedBox(height: 8),
                   PostHogMaskWidget(
-                    child: Text('Karta raqami: 4111 1111 1111 1111'),
+                    child: Text('Card number: 4111 1111 1111 1111'),
                   ),
                 ],
               ),

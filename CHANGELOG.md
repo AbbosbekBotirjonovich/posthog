@@ -2,58 +2,57 @@
 
 ## 0.1.0
 
-Rasmiy `posthog_flutter` (v5.36.2) plaginining sof Dart qayta
-implementatsiyasi. Asosiy maqsad — **Windows va Linux'ni qo'llab-quvvatlash**:
-rasmiy plagin native SDK'larga tayangani uchun bu platformalarda jimgina
-no-op'ga aylanardi.
+A pure-Dart reimplementation of the official `posthog_flutter` plugin
+(v5.36.2). The primary goal is **Windows and Linux support**: because the
+official plugin depends on the native SDKs, it silently degraded to a no-op on
+those platforms.
 
-### Qo'shildi
+### Added
 
-- Sof Dart HTTP transporti: `/batch`, `/s/`, `/flags/?v=2`, remote config.
-- Diskdagi navbat: bitta fayl = bitta event, UUIDv7 nomlash bilan tartib
-  kafolati. Offline'da eventlar saqlanadi va tarmoq qaytgach yuboriladi.
-- Eksponensial retry backoff (1s → 30s) jitter bilan, `Retry-After`
-  sarlavhasini hisobga oladi.
-- Shaxs boshqaruvi: anonim ID, `distinct_id`, `$anon_distinct_id` orqali
-  birlashtirish, bootstrap.
-- Sessiya boshqaruvi: 30 daqiqa faoliyatsizlik va 24 soat maksimal davomiylik
-  qoidalari; fonda aylantirish o'rniga tozalash.
-- Platformaga xos kontekst property'lari, shu jumladan **Windows va Linux**
-  uchun (`$os_name`, `$device_type`, ekran o'lchamlari).
-- Feature bayroqlari: yuklash, diskda cache, offline'da oxirgi ma'lum
-  qiymatlar, `$feature_flag_called` dedup bilan.
-- Session replay: rrweb `$snapshot` eventini Dart'da qurish, PNG → JPEG qayta
-  kodlash, sessiya boshida bir marta sampling.
-- Surveys: remote config'dan yuklash, targeting shartlarini Dart'da baholash,
-  branching (`end`, `specific_question`, `response_based`), `survey shown` /
-  `survey sent` / `survey dismissed` eventlari.
+- Pure-Dart HTTP transport: `/batch`, `/s/`, `/flags/?v=2`, remote config.
+- On-disk queue: one file per event, ordering guaranteed by UUIDv7 naming.
+  Events are persisted while offline and sent once the network returns.
+- Exponential retry backoff (1s -> 30s) with jitter, honouring the
+  `Retry-After` header.
+- Identity management: anonymous id, `distinct_id`, merging through
+  `$anon_distinct_id`, and bootstrap.
+- Session management: 30-minute inactivity and 24-hour maximum duration rules;
+  the session is cleared rather than rotated while in the background.
+- Platform-specific context properties, **including Windows and Linux**
+  (`$os_name`, `$device_type`, screen dimensions).
+- Feature flags: loading, on-disk caching, last-known values while offline, and
+  `$feature_flag_called` deduplication.
+- Session replay: the rrweb `$snapshot` event is built in Dart, PNG frames are
+  re-encoded as JPEG, and sampling is decided once per session.
+- Surveys: loaded from remote config, targeting conditions evaluated in Dart,
+  branching (`end`, `specific_question`, `response_based`), and the
+  `survey shown` / `survey sent` / `survey dismissed` events.
 
-### Tuzatildi
+### Fixed
 
-- Survey modelida savol `id` maydoni xato ravishda `type` dan o'qilardi — bu
-  `$survey_response_<id>` kalitlarini buzardi va bir xil turdagi savollar
-  bir-birini bosardi.
-- Survey branching (`end`, `specific_question`, `response_based`) endi
-  qo'llab-quvvatlanadi. Rasmiy plaginda bu qaror native SDK'da qabul
-  qilinardi (`surveyAction` MethodChannel chaqiruvi), web'da esa umuman
-  ishlamasdi.
-- Survey payload'ini tahlil qilishdagi non-null cast'lar to'liqsiz ma'lumotda
-  crash berardi; endi default qiymatlarga tushadi.
-- Stack trace filtrida paket nomi qattiq yozilgan edi (`posthog_flutter`), shu
-  sababli SDK o'z frame'larini tanimay qolardi.
+- A survey question's `id` field was mistakenly read from `type`, which
+  corrupted the `$survey_response_<id>` keys and let questions of the same type
+  overwrite one another.
+- Survey branching (`end`, `specific_question`, `response_based`) is now
+  supported. In the official plugin this decision was made by the native SDK
+  (a `surveyAction` MethodChannel call), and on web it did not work at all.
+- Non-null casts while parsing the survey payload crashed on incomplete data;
+  they now fall back to defaults.
+- The package name was hardcoded in the stack-trace filter (`posthog_flutter`),
+  so the SDK failed to recognise its own frames.
 
-### O'zgartirildi (rasmiy plagindan farqlar)
+### Changed (differences from the official plugin)
 
-- `beforeSend` endi **barcha** eventlarga qo'llanadi. Rasmiy SDK'da native
-  tomondan yuborilgan eventlar undan o'tmasdi.
-- Uzoq offline holatda navbat tashlab yuborilmaydi. Rasmiy SDK 3 marta
-  muvaffaqiyatsizlikdan keyin `dropAllRecords()` chaqirib butun navbatni
-  o'chirardi.
-- `Duration` sozlamalari sub-soniyali aniqlikni saqlaydi (native API butun
-  sonli soniyalarni kutgani uchun ular 1s ga yaxlitlanardi).
+- `beforeSend` now applies to **every** event. In the official SDK, events
+  emitted by the native side bypassed it.
+- The queue is never dropped during a long offline stretch. The official SDK
+  called `dropAllRecords()` after three consecutive failures, erasing the
+  entire queue.
+- `Duration` settings keep sub-second precision (they used to be rounded up to
+  1s because the native API expected whole seconds).
 
-### Qo'llab-quvvatlanmaydi
+### Not supported
 
-Native SDK'ni talab qiladigan imkoniyatlar API mosligi uchun no-op sifatida
-saqlangan: push notification metodlari, `pushIdentityProvider`,
-`captureNativeScreens`, `captureNativeExceptions`. Batafsil — README.
+Features that require the native SDK are kept as no-ops for API compatibility:
+the push notification methods, `pushIdentityProvider`, `captureNativeScreens`
+and `captureNativeExceptions`. See the README for details.

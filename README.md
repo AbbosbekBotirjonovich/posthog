@@ -3,53 +3,52 @@
 [![pub package](https://img.shields.io/pub/v/posthog_dart.svg)](https://pub.dev/packages/posthog_dart)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[PostHog](https://posthog.com) uchun sof Dart SDK — **Windows, Linux, Android,
-iOS, macOS va Web'da bir xil ishlaydi**.
+A pure-Dart SDK for [PostHog](https://posthog.com) that works identically on
+**Windows, Linux, Android, iOS, macOS and Web**.
 
-Rasmiy [`posthog_flutter`](https://pub.dev/packages/posthog_flutter) plagini
-`posthog-android` va `posthog-ios` native SDK'lari ustidagi qobiq. Windows va
-Linux uchun native SDK mavjud emas, shuning uchun u yerda plagin **jimgina
-no-op'ga aylanadi**: ilova xatosiz ishlaydi, lekin hech qanday analitika
-yig'ilmaydi. Bu paket o'sha ishni sof Dart'da, to'g'ridan-to'g'ri PostHog HTTP
-API'si orqali bajaradi — native bog'liqliksiz.
+The official [`posthog_flutter`](https://pub.dev/packages/posthog_flutter)
+plugin is a wrapper around the `posthog-android` and `posthog-ios` native SDKs.
+No native SDK exists for Windows or Linux, so on those platforms the plugin
+**silently becomes a no-op**: the app runs without errors, but no analytics are
+collected at all. This package does the same job in pure Dart, talking directly
+to the PostHog HTTP API — with no native dependency.
 
-API rasmiy plagin bilan aynan mos, shuning uchun **migratsiya import qatorini
-almashtirishdan iborat**.
+The API matches the official plugin exactly, so **migrating is a matter of
+changing one import line**.
 
-## Platformalar
+## Platforms
 
-| Imkoniyat | Android | iOS | macOS | Web | **Windows** | **Linux** |
+| Feature | Android | iOS | macOS | Web | **Windows** | **Linux** |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Event capture, identify, groups | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Feature flags | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Error tracking (Dart) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Session replay | ✅ | ✅ | ✅ | — | ✅ | ✅ |
 | Surveys | ✅ | ✅ | ✅ | —¹ | ✅ | ✅ |
-| Offline navbat (diskda) | ✅ | ✅ | ✅ | —² | ✅ | ✅ |
+| Offline queue (on disk) | ✅ | ✅ | ✅ | —² | ✅ | ✅ |
 
-¹ Web'da PostHog JS SDK'sidan foydalaning — `surveys` sozlamasi e'tiborsiz
-qoldiriladi.  ² Web'da navbat xotirada; batafsil [quyida](#malumot-saqlanishi).
+¹ Use the PostHog JS SDK on web — the `surveys` setting is ignored there.
+² On web the queue lives in memory; see [below](#data-storage).
 
-Rasmiy plagin bilan taqqoslaganda:
+Compared to the official plugin:
 
 | | `posthog_flutter` | `posthog_dart` |
 |---|---|---|
-| Windows / Linux | ❌ jimgina no-op | ✅ to'liq |
-| Native crash (fatal) | ✅ | ❌ |
-| Push notification | ✅ | ❌ |
+| Windows / Linux | ❌ silent no-op | ✅ full support |
+| Native crashes (fatal) | ✅ | ❌ |
+| Push notifications | ✅ | ❌ |
 
-Qo'llab-quvvatlanmaydigan imkoniyatlar API mosligi uchun no-op sifatida
-saqlangan — mavjud kod kompilyatsiya bo'ladi. Batafsil:
-[Cheklovlar](#cheklovlar).
+Unsupported features are kept as no-ops so API compatibility holds. See
+[Limitations](#limitations).
 
-## O'rnatish
+## Installation
 
 ```yaml
 dependencies:
   posthog_dart: ^0.1.0
 ```
 
-## Boshlash
+## Getting started
 
 ```dart
 import 'package:flutter/material.dart';
@@ -58,7 +57,7 @@ import 'package:posthog_dart/posthog_dart.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final config = PostHogConfig('<loyiha_api_kaliti>')
+  final config = PostHogConfig('<project_api_key>')
     ..host = 'https://us.i.posthog.com'
     ..captureApplicationLifecycleEvents = true;
 
@@ -68,12 +67,12 @@ Future<void> main() async {
 }
 ```
 
-API kalitini PostHog'da **Project settings → Project API key** dan oling. EU
-mintaqasi uchun `host` ni `https://eu.i.posthog.com` qiling; o'zingiz hosting
-qilsangiz — o'z domeningizni.
+Find your API key in PostHog under **Project settings → Project API key**. For
+the EU region set `host` to `https://eu.i.posthog.com`; for a self-hosted
+instance, use your own domain.
 
-Ekran ko'rishlarini avtomatik yig'ish uchun `PosthogObserver` ni ulang (surveys
-uchun ham shu talab qilinadi):
+To capture screen views automatically, install `PosthogObserver` (surveys
+require it too):
 
 ```dart
 MaterialApp(
@@ -82,7 +81,7 @@ MaterialApp(
 );
 ```
 
-Session replay uchun ilovani `PostHogWidget` bilan o'rang:
+For session replay, wrap the app in `PostHogWidget`:
 
 ```dart
 PostHogWidget(
@@ -90,20 +89,20 @@ PostHogWidget(
 );
 ```
 
-## Ishlatish
+## Usage
 
-### Eventlar
+### Events
 
 ```dart
 await Posthog().capture(
-  eventName: 'buyurtma_yakunlandi',
-  properties: {'summa': 42.5, 'valyuta': 'UZS'},
+  eventName: 'order_completed',
+  properties: {'amount': 42.5, 'currency': 'USD'},
 );
 
-await Posthog().screen(screenName: 'Savat');
+await Posthog().screen(screenName: 'Cart');
 ```
 
-### Foydalanuvchi shaxsi
+### Identity
 
 ```dart
 await Posthog().identify(
@@ -113,27 +112,26 @@ await Posthog().identify(
 
 await Posthog().group(groupType: 'company', groupKey: 'acme');
 
-// Chiqishda — keyingi eventlar yangi anonim shaxsga bog'lanadi.
+// On sign-out — subsequent events attach to a fresh anonymous person.
 await Posthog().reset();
 ```
 
 ### Feature flags
 
 ```dart
-if (await Posthog().isFeatureEnabled('yangi_dizayn')) {
+if (await Posthog().isFeatureEnabled('new_design')) {
   // ...
 }
 
-final variant = await Posthog().getFeatureFlag('tugma_rangi');
-final result = await Posthog().getFeatureFlagResult('yangi_dizayn');
+final variant = await Posthog().getFeatureFlag('button_colour');
+final result = await Posthog().getFeatureFlagResult('new_design');
 
 await Posthog().reloadFeatureFlags();
 ```
 
-Bayroqlar diskda cache qilinadi, shuning uchun offline'da oxirgi ma'lum
-qiymatlar qaytadi.
+Flags are cached on disk, so the last known values are returned while offline.
 
-### Xatolar va loglar
+### Errors and logs
 
 ```dart
 try {
@@ -142,14 +140,14 @@ try {
   await Posthog().captureException(error: e, stackTrace: s);
 }
 
-Posthog().logger.info('foydalanuvchi kirdi', {'usul': 'google'});
-Posthog().logger.error('to\'lov muvaffaqiyatsiz', {'kod': 'E001'});
+Posthog().logger.info('user signed in', {'method': 'google'});
+Posthog().logger.error('payment failed', {'code': 'E001'});
 ```
 
-Tutilmagan Dart xatolarini avtomatik yig'ish uchun:
+To capture uncaught Dart errors automatically:
 
 ```dart
-final config = PostHogConfig('<kalit>')
+final config = PostHogConfig('<key>')
   ..errorTrackingConfig.captureFlutterErrors = true
   ..errorTrackingConfig.capturePlatformDispatcherErrors = true
   ..errorTrackingConfig.captureIsolateErrors = true;
@@ -158,31 +156,31 @@ final config = PostHogConfig('<kalit>')
 ### Super properties
 
 ```dart
-await Posthog().register('ilova_bosqichi', 'beta'); // har eventga qo'shiladi
-await Posthog().unregister('ilova_bosqichi');
+await Posthog().register('app_stage', 'beta'); // added to every event
+await Posthog().unregister('app_stage');
 ```
 
-### Maxfiylik
+### Privacy
 
 ```dart
-await Posthog().disable();  // yig'ishni to'xtatish
+await Posthog().disable();  // stop collecting
 await Posthog().enable();
 ```
 
-Boshidanoq o'chirish uchun `config.optOut = true`.
+To opt out from the start, set `config.optOut = true`.
 
-Session replay'da maxfiy maydonlarni yashirish:
+To hide sensitive fields in session replay:
 
 ```dart
 PostHogMaskWidget(
-  child: Text('Karta raqami: 4111 1111 1111 1111'),
+  child: Text('Card number: 4111 1111 1111 1111'),
 );
 ```
 
-## Konfiguratsiya
+## Configuration
 
 ```dart
-final config = PostHogConfig('<kalit>')
+final config = PostHogConfig('<key>')
   ..host = 'https://us.i.posthog.com'
   ..flushAt = 20
   ..flushInterval = const Duration(seconds: 30)
@@ -190,44 +188,44 @@ final config = PostHogConfig('<kalit>')
   ..debug = true;
 ```
 
-| Sozlama | Default | Tavsif |
+| Setting | Default | Description |
 |---|---|---|
-| `host` | `https://us.i.posthog.com` | API manzili (EU yoki self-hosted) |
-| `flushAt` | `20` | Shuncha event yig'ilganda yuboriladi |
-| `flushInterval` | `30s` | Vaqt bo'yicha yuborish oralig'i |
-| `maxQueueSize` | `1000` | Navbat chegarasi; oshsa eng eski o'chiriladi |
-| `maxBatchSize` | `50` | Bitta so'rovdagi maksimal event |
-| `captureApplicationLifecycleEvents` | `true` | `Application Opened` va h.k. |
-| `preloadFeatureFlags` | `true` | `setup()` da bayroqlarni yuklash |
-| `sendFeatureFlagEvents` | `true` | `$feature_flag_called` yuborish |
+| `host` | `https://us.i.posthog.com` | API endpoint (EU or self-hosted) |
+| `flushAt` | `20` | Send once this many events are queued |
+| `flushInterval` | `30s` | Time-based send interval |
+| `maxQueueSize` | `1000` | Queue limit; the oldest events are dropped past it |
+| `maxBatchSize` | `50` | Maximum events per request |
+| `captureApplicationLifecycleEvents` | `true` | `Application Opened` and friends |
+| `preloadFeatureFlags` | `true` | Load flags during `setup()` |
+| `sendFeatureFlagEvents` | `true` | Emit `$feature_flag_called` |
 | `sessionReplay` | `false` | Session replay |
-| `surveys` | `true` | Surveys (web'da e'tiborsiz) |
-| `personProfiles` | `identifiedOnly` | Anonim eventlar uchun profil yaratish |
-| `optOut` | `false` | Yig'ishni boshidanoq o'chirish |
-| `debug` | `false` | Konsolga batafsil log |
+| `surveys` | `true` | Surveys (ignored on web) |
+| `personProfiles` | `identifiedOnly` | Whether anonymous events create profiles |
+| `optOut` | `false` | Disable collection from the start |
+| `debug` | `false` | Verbose console logging |
 
-Eventni yuborishdan oldin o'zgartirish yoki tashlab yuborish:
+To rewrite or drop an event before it is sent:
 
 ```dart
 config.beforeSend = [
-  (event) => event.event == '\$screen' ? null : event, // tashlanadi
+  (event) => event.event == '\$screen' ? null : event, // dropped
 ];
 ```
 
-## Rasmiy plagindan o'tish
+## Migrating from the official plugin
 
-Metod nomlari, parametr nomlari va default qiymatlar **aynan bir xil**.
-Import qatorini almashtiring:
+Method names, parameter names and default values are **identical**. Change the
+import:
 
 ```dart
-// eski
+// before
 import 'package:posthog_flutter/posthog_flutter.dart';
 
-// yangi
+// after
 import 'package:posthog_dart/posthog_dart.dart';
 ```
 
-`pubspec.yaml` da:
+And in `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -235,90 +233,88 @@ dependencies:
   posthog_dart: ^0.1.0
 ```
 
-Boshqa hech nima o'zgarmaydi. Native tomon (Android `AndroidManifest.xml`,
-iOS `Info.plist`) sozlamalari endi kerak emas — ularni olib tashlashingiz
-mumkin.
+Nothing else changes. Native-side setup (Android `AndroidManifest.xml`, iOS
+`Info.plist`) is no longer needed and can be removed.
 
-Diqqat: bu paket alohida `distinct_id` va navbat saqlaydi. Migratsiyadan keyin
-mavjud foydalanuvchilarga yangi anonim ID beriladi; uzluksizlik kerak bo'lsa
-`config.bootstrap` orqali eski qiymatni bering.
+Note: this package keeps its own `distinct_id` and queue. After migrating,
+existing users are assigned a new anonymous id; if you need continuity, supply
+the previous value through `config.bootstrap`.
 
-## Cheklovlar
+## Limitations
 
-Quyidagilar native SDK'ni talab qiladi va sof Dart'da amalga oshirib
-bo'lmaydi. API mosligi uchun ular **no-op** sifatida saqlangan — mavjud kod
-kompilyatsiya bo'ladi, lekin hech nima yuborilmaydi:
+The following require the native SDK and cannot be implemented in pure Dart.
+They are kept as **no-ops** so API compatibility holds — existing code still
+compiles, but nothing is sent:
 
 - `registerPushNotificationToken()`, `unregisterPushNotificationToken()`,
-  `capturePushNotificationOpened()` — FCM/APNs token registratsiyasi
+  `capturePushNotificationOpened()` — FCM/APNs token registration
 - `PostHogConfig.pushIdentityProvider`
-- `PostHogSessionReplayConfig.captureNativeScreens` — Flutter UI'sini qoplagan
-  native ekranni suratga olish
-- `PostHogErrorTrackingConfig.captureNativeExceptions` — native fatal crash
+- `PostHogSessionReplayConfig.captureNativeScreens` — capturing a native screen
+  that covers the Flutter UI
+- `PostHogErrorTrackingConfig.captureNativeExceptions` — native fatal crashes
 
-Shuningdek:
+Additionally:
 
-- **Exception steps** buferi Dart'da yashaydi, shuning uchun native fatal
-  crash'dan omon qolmaydi (rasmiy plaginda u native SDK'da edi).
-- **Web'da navbat xotirada**: sahifa yangilanganda yuborilmagan eventlar
-  yo'qoladi. Foydalanuvchi shaxsi esa `localStorage` da saqlanadi.
-- **Native platform view'lar** replay'da qora maska bilan qoplanadi (ularni
-  suratga olish native SDK'ni talab qiladi).
+- The **exception steps** buffer lives in Dart, so it does not survive a native
+  fatal crash (in the official plugin it lived in the native SDK).
+- **On web the queue is in memory**: unsent events are lost when the page
+  reloads. User identity is still persisted, in `localStorage`.
+- **Native platform views** are covered with a black mask in replay (capturing
+  them requires the native SDK).
 
-## Rasmiy plagindan farqlar
+## Differences from the official plugin
 
-Windows va Linux qo'llab-quvvatlashidan tashqari:
+Beyond Windows and Linux support:
 
-- `beforeSend` **barcha** eventlarga qo'llanadi. Rasmiy SDK'da native tomondan
-  yuborilgan eventlar (`survey shown` va boshqalar) undan o'tmasdi.
-- Retry backoff'ga **jitter** qo'shildi — ko'p qurilma offline'dan bir vaqtda
-  qaytganda serverga to'lqin hosil qilmaydi.
-- Uzoq offline holatda **navbat tashlab yuborilmaydi**. Rasmiy SDK 3 marta
-  muvaffaqiyatsizlikdan keyin butun navbatni o'chirardi.
-- Survey modelidagi **bug tuzatildi**: savol `id` maydoni xato ravishda `type`
-  dan o'qilardi, bu javob kalitlarini buzardi.
-- Survey **branching** (`end`, `specific_question`, `response_based`) endi
-  ishlaydi. Rasmiy plaginda bu qaror native SDK'da qabul qilinardi, web'da esa
-  umuman qo'llab-quvvatlanmasdi.
-- Survey payload'ini tahlil qilish **crash bermaydi**: to'liqsiz ma'lumot
-  default qiymatlarga tushadi.
-- `Duration` sozlamalari sub-soniyali aniqlikni saqlaydi (native API butun
-  soniyalarni kutgani uchun ular yaxlitlanardi).
+- `beforeSend` applies to **every** event. In the official SDK, events emitted
+  by the native side (`survey shown` and friends) bypassed it.
+- Retry backoff has **jitter** added, so many devices coming back online at
+  once do not surge the server.
+- The queue is **never dropped** during a long offline stretch. The official SDK
+  erased the entire queue after three consecutive failures.
+- A survey model **bug is fixed**: a question's `id` was mistakenly read from
+  `type`, which corrupted the response keys.
+- Survey **branching** (`end`, `specific_question`, `response_based`) now works.
+  In the official plugin the native SDK made that decision, and on web it was
+  not supported at all.
+- Parsing a survey payload **no longer crashes**: incomplete data falls back to
+  defaults.
+- `Duration` settings keep sub-second precision (they were rounded up because
+  the native API expected whole seconds).
 
-Kodda har bir ataylab qilingan chetlanish `// PostHog upstream'dan farq:`
-izohi bilan belgilangan.
+Every deliberate deviation is marked in the code with a
+`// Differs from PostHog upstream:` comment.
 
-## Ma'lumot saqlanishi
+## Data storage
 
-| Platforma | Navbat | Shaxs va sozlamalar |
+| Platform | Queue | Identity and settings |
 |---|---|---|
 | Windows | `%APPDATA%/posthog/` | `%APPDATA%/posthog/state.json` |
-| Linux / macOS | application support katalogi | o'sha katalogda `state.json` |
-| Android / iOS | application support katalogi | o'sha katalogda `state.json` |
-| Web | xotira | `localStorage` |
+| Linux / macOS | application support directory | `state.json` in that directory |
+| Android / iOS | application support directory | `state.json` in that directory |
+| Web | memory | `localStorage` |
 
-Navbat: bitta fayl = bitta event, nomi UUIDv7. Bu tartibni kafolatlaydi va
-yozish paytida jarayon o'lsa faqat oxirgi, chala yozilgan event yo'qoladi.
+The queue stores one file per event, named with a UUIDv7. That guarantees
+ordering, and if the process dies mid-write only the last, partially written
+event is lost.
 
-Yuborish muvaffaqiyatsiz bo'lsa eksponensial backoff qo'llanadi (1s → 30s,
-jitter bilan), `Retry-After` sarlavhasi hisobga olinadi. 4xx javoblar qayta
-urinilmaydi; tarmoq xatolari va 5xx — urinilaveradi.
+Failed sends back off exponentially (1s → 30s, with jitter) and honour the
+`Retry-After` header. 4xx responses are not retried; network errors and 5xx are.
 
-## Namuna
+## Example
 
-`example/` katalogida Windows, Linux, macOS, Android, iOS va Web'da
-ishlaydigan to'liq ilova bor:
+The `example/` directory contains a full app that runs on Windows, Linux,
+macOS, Android, iOS and Web:
 
 ```bash
 cd example
 flutter run -d windows --dart-define=POSTHOG_KEY=phc_xxx
 ```
 
-## Litsenziya
+## License
 
-MIT. Bu paket rasmiy
-[`posthog-flutter`](https://github.com/PostHog/posthog-flutter) plaginining
-Dart kodiga asoslangan (MIT, © PostHog). To'liq atribut — [LICENSE](LICENSE).
+MIT. This package is based on the Dart code of the official
+[`posthog-flutter`](https://github.com/PostHog/posthog-flutter) plugin
+(MIT, © PostHog). Full attribution is in [LICENSE](LICENSE).
 
-Bu jamoatchilik tomonidan yaratilgan paket va PostHog Inc. bilan rasmiy
-aloqasi yo'q.
+This is a community package and is not officially affiliated with PostHog Inc.

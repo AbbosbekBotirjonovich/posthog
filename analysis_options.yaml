@@ -1,7 +1,7 @@
 analyzer:
   exclude:
     - build/**
-    # Rasmiy plagin nusxasi — faqat kod ko'chirish uchun referens, tahlil qilinmaydi.
+    # A copy of the official plugin, kept only as a reference for porting code.
     - reference/**
 
 include: package:flutter_lints/flutter.yaml
