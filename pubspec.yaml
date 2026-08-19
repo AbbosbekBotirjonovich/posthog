@@ -1,0 +1,53 @@
+name: posthog
+description: >-
+  Sof Dart PostHog SDK — Windows, Linux, Android, iOS, macOS va Web'da bir xil
+  ishlaydi. Rasmiy posthog_flutter bilan API darajasida mos.
+version: 0.1.0
+repository: https://github.com/AbbosbekBotirjonovich/posthog
+issue_tracker: https://github.com/AbbosbekBotirjonovich/posthog/issues
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Transport va persistence
+  http: ^1.2.0
+  path_provider: ^2.1.0
+
+  # Rasmiy plagindan ko'chirilgan kod shularga tayanadi
+  plugin_platform_interface: ^2.0.2
+  meta: ^1.3.0
+  stack_trace: ^1.12.0
+  web: ^1.1.0
+
+  # Kontekst property'lari ($app_version, $device_model va h.k.)
+  package_info_plus: ^10.0.0
+
+  # Surveys'dagi link savollari uchun (native openUrl o'rniga)
+  url_launcher: ^6.3.0
+
+  # Session replay: PNG -> JPEG qayta kodlash (trafikni 5-10x kamaytiradi)
+  image: ^4.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Faqat test uchun. `platform` 3.0.0 hozirgi Dart SDK'da olib tashlangan
+  # `Platform.packageRoot` ga murojaat qiladi va test kompilyatsiyasini
+  # buzadi. U path_provider_android orqali tranzitiv keladi, shuning uchun
+  # pastki chegara shu yerda ko'tariladi. Foydalanuvchi ilovasiga ta'sir
+  # qilmaydi (dev_dependency tranzitiv tarqalmaydi).
+  platform: ">=3.1.0 <4.0.0"
+
+# Eslatma: public API yuzasini rasmiy plagin bilan diff qilish uchun
+# `dart_apitool` ishlatiladi, lekin u dev_dependency sifatida qo'shilmaydi —
+# uning analyzer talabi flutter_test'ning meta pinini buzadi. O'rniga:
+#   dart pub global activate dart_apitool
+
+flutter:

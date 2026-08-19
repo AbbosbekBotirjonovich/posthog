@@ -1,0 +1,188 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:posthog/posthog.dart';
+import 'package:posthog/src/posthog_http.dart';
+import 'package:posthog/src/posthog_flutter_platform_interface.dart';
+import 'package:posthog/src/posthog_observer.dart';
+
+import 'posthog_flutter_platform_interface_fake.dart';
+
+void main() {
+  PageRoute<dynamic> route(RouteSettings? settings) => PageRouteBuilder<void>(
+        pageBuilder: (ignoredA, ignoredB, ignoredC) => Container(),
+        settings: settings,
+      );
+
+  final fake = PosthogFlutterPlatformFake();
+
+  setUp(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    PosthogFlutterPlatformInterface.instance = fake;
+  });
+
+  tearDown(() {
+    fake.screenName = null;
+    PosthogFlutterPlatformInterface.instance = PosthogHttp();
+  });
+
+  PosthogObserver getSut({
+    ScreenNameExtractor nameExtractor = defaultNameExtractor,
+    PostHogRouteFilter routeFilter = defaultPostHogRouteFilter,
+  }) {
+    return PosthogObserver(
+      nameExtractor: nameExtractor,
+      routeFilter: routeFilter,
+    );
+  }
+
+  test('returns current route name', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+
+    final sut = getSut();
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, 'Current Route');
+  });
+
+  test('returns overriden route name', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+
+    String? nameExtractor(RouteSettings settings) => 'overriden';
+
+    final sut = getSut(nameExtractor: nameExtractor);
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, 'overriden');
+  });
+
+  test('returns overriden root route name', () {
+    final currentRoute = route(const RouteSettings(name: '/'));
+
+    final sut = getSut();
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, 'root (\'/\')');
+  });
+
+  test('does not capture not named routes', () {
+    final currentRoute = route(const RouteSettings(name: null));
+
+    final sut = getSut();
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, null);
+  });
+
+  test('does not capture blank routes', () {
+    final currentRoute = route(const RouteSettings(name: '  '));
+
+    final sut = getSut();
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, null);
+  });
+
+  test('does not capture filtered routes', () {
+    // CustomOverlawRoute isn't a PageRoute
+    final overlayRoute = CustomOverlawRoute(
+      settings: const RouteSettings(name: 'Overlay Route'),
+    );
+
+    final sut = getSut();
+    sut.didPush(overlayRoute, null);
+
+    expect(fake.screenName, null);
+  });
+
+  test('allows overriding the route filter', () {
+    final overlayRoute = CustomOverlawRoute(
+      settings: const RouteSettings(name: 'Overlay Route'),
+    );
+
+    bool defaultPostHogRouteFilter(Route<dynamic>? route) =>
+        route is PageRoute || route is OverlayRoute;
+
+    final sut = getSut(routeFilter: defaultPostHogRouteFilter);
+    sut.didPush(overlayRoute, null);
+
+    expect(fake.screenName, 'Overlay Route');
+  });
+
+  test('does not capture screen events when app is paused', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+
+    final sut = getSut();
+
+    // Simulate app going to background
+    sut.didChangeAppLifecycleState(AppLifecycleState.paused);
+
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, null);
+  });
+
+  test('does not capture screen events when app is inactive', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+
+    final sut = getSut();
+
+    // Simulate app becoming inactive
+    sut.didChangeAppLifecycleState(AppLifecycleState.inactive);
+
+    sut.didPush(currentRoute, null);
+
+    expect(fake.screenName, null);
+  });
+
+  test('resumes capturing screen events when app returns to foreground', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+
+    final sut = getSut();
+
+    // Simulate app going to background and back
+    sut.didChangeAppLifecycleState(AppLifecycleState.paused);
+    sut.didPush(currentRoute, null);
+    expect(fake.screenName, null);
+
+    sut.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    sut.didPush(currentRoute, null);
+    expect(fake.screenName, 'Current Route');
+  });
+
+  test('does not capture screen events on didPop when app is paused', () {
+    final currentRoute = route(const RouteSettings(name: 'Current Route'));
+    final previousRoute = route(const RouteSettings(name: 'Previous Route'));
+
+    final sut = getSut();
+
+    // Simulate app going to background
+    sut.didChangeAppLifecycleState(AppLifecycleState.paused);
+
+    sut.didPop(currentRoute, previousRoute);
+
+    expect(fake.screenName, null);
+  });
+
+  test('does not capture screen events on didReplace when app is paused', () {
+    final oldRoute = route(const RouteSettings(name: 'Old Route'));
+    final newRoute = route(const RouteSettings(name: 'New Route'));
+
+    final sut = getSut();
+
+    // Simulate app going to background
+    sut.didChangeAppLifecycleState(AppLifecycleState.paused);
+
+    sut.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+
+    expect(fake.screenName, null);
+  });
+}
+
+class CustomOverlawRoute extends OverlayRoute {
+  CustomOverlawRoute({super.settings});
+
+  @override
+  Iterable<OverlayEntry> createOverlayEntries() {
+    return [];
+  }
+}

@@ -1,0 +1,889 @@
+import 'dart:async';
+
+import 'logs/posthog_log_record.dart';
+import 'posthog_event.dart';
+import 'util/logging.dart';
+
+/// Defines the callback signature for when feature flags are loaded.
+///
+/// Use [Posthog.getFeatureFlag] or [Posthog.isFeatureEnabled] within this
+/// callback to access the loaded flag values.
+typedef OnFeatureFlagsCallback = void Function();
+
+/// Callback to intercept and modify events before they are sent to PostHog.
+///
+/// The [event] argument contains the event name and user-provided properties
+/// that are about to be captured. Return a possibly modified event to send it,
+/// or return `null` to drop it.
+///
+/// Callbacks can be synchronous or asynchronous (returning
+/// `FutureOr<PostHogEvent?>`).
+typedef BeforeSendCallback = FutureOr<PostHogEvent?> Function(
+  PostHogEvent event,
+);
+
+/// Callback to intercept and modify log records before they are sent to
+/// PostHog.
+///
+/// The [record] argument contains the body, level, and user-provided
+/// attributes that are about to be captured. Return a possibly modified record
+/// to send it, or return `null` to drop it.
+///
+/// Callbacks can be synchronous or asynchronous (returning
+/// `FutureOr<PostHogLogRecord?>`).
+typedef BeforeSendLogCallback = FutureOr<PostHogLogRecord?> Function(
+  PostHogLogRecord record,
+);
+
+/// Mints a signed identity-verification token for a push subscription request.
+///
+/// Called by the native SDK with the current [distinctId] and [appId]. Return
+/// `null` to send the request without an identity token.
+typedef PushIdentityProvider = Future<String?> Function(
+  String distinctId,
+  String appId,
+);
+
+/// Controls whether events create or update PostHog person profiles.
+enum PostHogPersonProfiles {
+  /// Never create person profiles from captured events.
+  never,
+
+  /// Create or update person profiles for all captured events.
+  always,
+
+  /// Create or update person profiles only after the user has been identified.
+  identifiedOnly,
+}
+
+/// Controls which network connection types can be used for sending data.
+///
+/// This setting is currently applied only on Apple platforms.
+enum PostHogDataMode {
+  /// Send data only on Wi-Fi connections.
+  wifi,
+
+  /// Send data only on cellular connections.
+  cellular,
+
+  /// Send data on any available connection.
+  any,
+}
+
+/// Configuration used to initialize the PostHog Flutter SDK.
+///
+/// Create an instance with your project token, customize any options, and pass
+/// it to `Posthog().setup(config)`.
+class PostHogConfig {
+  static const _defaultHost = 'https://us.i.posthog.com';
+
+  /// Your PostHog project token.
+  ///
+  /// You can find it at:
+  /// https://us.posthog.com/settings/project-details#variables
+  ///
+  /// This field was formerly named [apiKey].
+  final String projectToken;
+
+  /// Deprecated alias for [projectToken].
+  @Deprecated(
+    'Deprecated in favor of [projectToken]. This will be removed in the next major version.',
+  )
+  String get apiKey => projectToken;
+
+  String _host = _defaultHost;
+
+  /// The PostHog ingestion host.
+  ///
+  /// Defaults to `https://us.i.posthog.com`. The setter trims surrounding
+  /// whitespace and falls back to the default host when assigned a blank value.
+  String get host => _host;
+  set host(String value) => _host = _normalizeHost(value);
+
+  /// Number of queued events that triggers an automatic flush.
+  ///
+  /// Defaults to `20`.
+  var flushAt = 20;
+
+  /// Maximum number of events stored in the local queue.
+  ///
+  /// When the queue is full, the oldest events may be dropped by the native SDK.
+  /// Defaults to `1000`.
+  var maxQueueSize = 1000;
+
+  /// Maximum number of events sent in a single batch.
+  ///
+  /// Defaults to `50`.
+  var maxBatchSize = 50;
+
+  /// Maximum time between automatic flush attempts.
+  ///
+  /// Defaults to 30 seconds.
+  var flushInterval = const Duration(seconds: 30);
+
+  /// Whether calls that evaluate feature flags capture `$feature_flag_called`.
+  ///
+  /// Defaults to `true`.
+  var sendFeatureFlagEvents = true;
+
+  /// Whether feature flags are loaded when the SDK starts.
+  ///
+  /// Defaults to `true`, which means every SDK start issues a `/flags` request.
+  /// Set it to `false` if you evaluate flags lazily (via
+  /// `Posthog().reloadFeatureFlags()`) and want to avoid that request.
+  ///
+  /// Note that `Posthog().identify()`, `Posthog().group()` and the
+  /// `set*PropertiesForFlags` helpers reload feature flags as well, so turning
+  /// preloading off only removes the request made at startup.
+  ///
+  /// **Flutter web:** not applied. The web SDK hooks onto an already-initialized
+  /// posthog-js instance, so set
+  /// [`advanced_disable_feature_flags_on_first_load`](https://posthog.com/docs/libraries/js/config)
+  /// in your `posthog.init({...})` call instead.
+  var preloadFeatureFlags = true;
+
+  /// Whether the SDK captures application lifecycle events automatically.
+  ///
+  /// Captured events include app opened, backgrounded, installed, and updated
+  /// events where supported by the platform. Defaults to `true`.
+  var captureApplicationLifecycleEvents = true;
+
+  /// Configuration for rage-click autocapture on iOS and Mac Catalyst.
+  ///
+  /// Rage-click autocapture is not currently supported on other platforms.
+  var rageClickConfig = PostHogRageClickConfig();
+
+  /// Whether the SDK emits verbose debug logs.
+  ///
+  /// Defaults to `false`.
+  var debug = false;
+
+  /// Whether the SDK starts with data collection disabled.
+  ///
+  /// Defaults to `false`. Use `Posthog().disable()` and `Posthog().enable()` to
+  /// change this setting at runtime.
+  var optOut = false;
+
+  /// Controls whether captured events create or update person profiles.
+  ///
+  /// Defaults to [PostHogPersonProfiles.identifiedOnly].
+  var personProfiles = PostHogPersonProfiles.identifiedOnly;
+
+  /// Whether mobile session replay is enabled for Android and iOS.
+  ///
+  /// Requires Record user sessions to be enabled in PostHog project settings.
+  /// Defaults to `false`.
+  var sessionReplay = false;
+
+  /// Configuration for mobile session replay.
+  ///
+  /// [sessionReplay] must be enabled for these options to take effect.
+  var sessionReplayConfig = PostHogSessionReplayConfig();
+
+  /// Network connection types that can be used to send data on Apple platforms.
+  ///
+  /// Defaults to [PostHogDataMode.any].
+  var dataMode = PostHogDataMode.any;
+
+  /// Enable Surveys
+  ///
+  /// **Notes:**
+  /// - After calling `Posthog().close()`, surveys will not be rendered until the
+  ///   SDK is re-initialized and the next navigation event occurs.
+  /// - You must install `PosthogObserver` in your app for surveys to display.
+  ///   - See: https://posthog.com/docs/surveys/installation?tab=Flutter#step-two-install-posthogobserver
+  /// - For Flutter web, this setting will be ignored. Surveys on web use the
+  ///   JavaScript Web SDK instead.
+  ///   - See: https://posthog.com/docs/surveys/installation?tab=Web
+  ///
+  /// Defaults to true.
+  var surveys = true;
+
+  /// Configuration for error tracking and exception capture.
+  final errorTrackingConfig = PostHogErrorTrackingConfig();
+
+  /// Configuration for the logs subsystem (`Posthog().captureLog()` and the
+  /// `Posthog().logger` facade).
+  final logsConfig = PostHogLogsConfig();
+
+  /// Pre-seeded identity and feature-flag state applied on the very first SDK
+  /// launch, before any network request completes.
+  ///
+  /// Set this before calling `Posthog().setup(config)` so events captured during
+  /// cold start carry a caller-controlled `$distinct_id` and feature-flag reads
+  /// return caller-provided values before the first `/flags` response. Mirrors
+  /// the [`bootstrap` option in `posthog-js`](https://posthog.com/docs/feature-flags/bootstrapping).
+  ///
+  /// Forwarded to the native iOS/Android SDKs, which apply all precedence rules
+  /// (never overwrite persisted identity, overlay loaded flags over bootstrapped
+  /// ones, drop the bootstrap on `reset()`). Defaults to `null` (no bootstrap).
+  ///
+  /// **Flutter web:** not applied. The web SDK hooks onto an already-initialized
+  /// posthog-js instance, so configure `bootstrap` in your `posthog.init({...})`
+  /// call instead.
+  PostHogBootstrapConfig? bootstrap;
+
+  /// Callback to be invoked when feature flags are loaded.
+  ///
+  /// Use [Posthog.getFeatureFlag] or [Posthog.isFeatureEnabled] within this
+  /// callback to access the loaded flag values.
+  OnFeatureFlagsCallback? onFeatureFlags;
+
+  /// Whether to automatically register this device's push token with PostHog.
+  ///
+  /// On iOS the native SDK swizzles the app delegate's remote-notification
+  /// registration callback; on Android it fetches the FCM token at startup when
+  /// `firebase-messaging` is on the classpath. Either way the host app is still
+  /// responsible for requesting notification permission and calling
+  /// `registerForRemoteNotifications()` (iOS) — this only observes the result.
+  ///
+  /// The startup fetch does not see later token refreshes; wire those to
+  /// [Posthog.registerPushNotificationToken] yourself.
+  ///
+  /// **Flutter web:** not supported. Defaults to `true`.
+  bool capturePushNotificationSubscriptions = true;
+
+  /// Whether to automatically capture `$push_notification_opened` when a user
+  /// taps a PostHog-delivered notification.
+  ///
+  /// Coverage differs per platform. iOS hooks the notification-response
+  /// delegate, so every tap on a **remote** notification is captured whatever
+  /// the app state; locally-scheduled notifications are ignored. Android only
+  /// reads the launch intent, so it sees cold starts alone. Call
+  /// [Posthog.capturePushNotificationOpened] for the opens this misses —
+  /// local notifications on either platform, plus foreground messages and
+  /// warm-start taps on Android.
+  ///
+  /// **Flutter web:** not supported. Defaults to `true`.
+  bool capturePushNotificationOpened = true;
+
+  /// Mints a signed identity-verification token for push subscription requests.
+  ///
+  /// Only needed when your PostHog project requires identity verification for
+  /// push. The native SDK calls this with the current `distinctId` and `appId`
+  /// and attaches the returned token to the subscription request; return `null`
+  /// to send without one.
+  ///
+  /// The token is minted by your backend (HS256, with `sub` = distinctId,
+  /// `app_id`, and `aud` = `posthog:push_identity`), never in the app.
+  ///
+  /// The native SDKs cache the result per `(distinctId, appId)` and give this
+  /// callback 10 seconds before falling back to an unauthenticated request, so
+  /// a slow or throwing implementation degrades rather than blocking delivery.
+  ///
+  /// Requires programmatic setup on both platforms. Under auto-init
+  /// (`com.posthog.posthog.AUTO_INIT`, Info.plist on iOS, AndroidManifest
+  /// `<meta-data>` on Android) the native SDK is already set up before Dart
+  /// runs and a later [Posthog.setup] is a no-op, so the provider is never
+  /// installed. Set `com.posthog.posthog.AUTO_INIT` to `false` and call
+  /// [Posthog.setup].
+  ///
+  /// **Flutter web:** not supported. Defaults to `null`.
+  PushIdentityProvider? pushIdentityProvider;
+
+  /// Callbacks to intercept and modify events before they are sent to PostHog.
+  ///
+  /// Callbacks are invoked in order for events captured via Dart APIs:
+  /// - `Posthog().capture()` - custom events
+  /// - `Posthog().screen()` - screen events (event name will be `$screen`)
+  /// - `Posthog().captureException()` - exception events (event name will be
+  ///   `$exception`)
+  ///
+  /// Each callback receives the event (possibly modified by previous callbacks).
+  /// Return a possibly modified event to continue, or return `null` to drop it.
+  ///
+  /// **Example (single callback):**
+  /// ```dart
+  /// config.beforeSend = [(event) {
+  ///   // Drop specific events
+  ///   if (event.event == 'sensitive_event') {
+  ///     return null;
+  ///   }
+  ///   return event;
+  /// }];
+  /// ```
+  ///
+  /// **Example (multiple callbacks):**
+  /// ```dart
+  /// config.beforeSend = [
+  ///   // First: PII redaction
+  ///   (event) {
+  ///     event.properties?.remove('email');
+  ///     return event;
+  ///   },
+  ///   // Second: Event filtering
+  ///   (event) => event.event == 'drop me' ? null : event,
+  /// ];
+  /// ```
+  ///
+  /// **Example (async callback):**
+  /// ```dart
+  /// config.beforeSend = [
+  ///   (event) async {
+  ///     // Perform async operations
+  ///     final shouldSend = await checkIfEventAllowed(event.event);
+  ///     if (!shouldSend) {
+  ///       return null; // Drop the event
+  ///     }
+  ///     // Enrich event with async data
+  ///     final extraData = await fetchExtraContext();
+  ///     event.properties = {...?event.properties, ...extraData};
+  ///     return event;
+  ///   },
+  /// ];
+  /// ```
+  ///
+  /// **Limitations:**
+  /// - These callbacks do NOT intercept native-initiated events such as:
+  ///   - Session replay events (`$snapshot`) when `config.sessionReplay` is
+  ///     enabled
+  ///   - Application lifecycle events (`Application Opened`, etc.) when
+  ///     `config.captureApplicationLifecycleEvents` is enabled
+  ///   - Feature flag events (`$feature_flag_called`) when
+  ///     `config.sendFeatureFlagEvents` is enabled
+  ///   - Identity events (`$set`) when `identify` is called
+  ///   - Survey events (`survey shown`, etc.) when `config.surveys` is enabled
+  /// - Only user-provided properties are available; system properties (like
+  ///   `$device_type`, `$session_id`) are added by the native SDK at a later
+  ///   stage.
+  ///
+  /// **Note:**
+  /// - Callbacks can be synchronous or asynchronous (via
+  ///   `FutureOr<PostHogEvent?>`)
+  /// - Exceptions in a callback will skip that callback and continue with the
+  ///   next one in the list.
+  /// - If any callback returns `null`, the event is dropped and subsequent
+  ///   callbacks are not called.
+  List<BeforeSendCallback> beforeSend = [];
+
+  // TODO: missing getAnonymousId, captureDeepLinks integrations
+
+  /// Creates a configuration for [projectToken].
+  ///
+  /// The [projectToken] is trimmed before it is stored.
+  ///
+  /// The optional [onFeatureFlags] callback is invoked when feature flags finish
+  /// loading.
+  ///
+  /// The optional [beforeSend] callbacks are copied into [beforeSend] and run in
+  /// order before Dart-captured events are sent.
+  PostHogConfig(
+    String projectToken, {
+    this.onFeatureFlags,
+    List<BeforeSendCallback>? beforeSend,
+  })  : projectToken = projectToken.trim(),
+        beforeSend = beforeSend ?? [];
+
+  static String _normalizeHost(String host) {
+    final trimmedHost = host.trim();
+    return trimmedHost.isEmpty ? _defaultHost : trimmedHost;
+  }
+
+  // Differs from PostHog upstream: `toMap()` was removed. It served to pass
+  // the configuration to the native SDK over the MethodChannel; the pure-Dart
+  // implementation uses the config object directly.
+}
+
+/// Pre-seeded identity and feature-flag state applied on the very first SDK
+/// launch, before any network request completes.
+///
+/// Assign an instance to [PostHogConfig.bootstrap] before calling
+/// `Posthog().setup(config)`. The values are forwarded to the native iOS/Android
+/// SDKs, which own all bootstrap behavior:
+///
+/// - Bootstrapped identity seeds the very first session only. It is applied only
+///   when no identity is persisted for that scope, and never overwrites an
+///   existing user. An anonymous bootstrap ([isIdentifiedId] `false`) seeds the
+///   anonymous id; an identified bootstrap ([isIdentifiedId] `true`) seeds the
+///   distinct id and marks the user identified (merging an existing anonymous
+///   user via `identify()`, or preserving a different identified user with a
+///   warning) — it never becomes the device id.
+/// - Only enabled bootstrapped flags are served (a `true` or a non-empty
+///   variant string; `false` or empty values are dropped). They are served
+///   until the first `/flags` response, which then takes over, and they are
+///   dropped on `reset()`.
+///
+/// **Flutter web:** not applied. Configure `bootstrap` in your
+/// `posthog.init({...})` call instead.
+class PostHogBootstrapConfig {
+  /// Creates a bootstrap configuration.
+  ///
+  /// Pass only the dimensions you want to seed; leave the rest `null`.
+  const PostHogBootstrapConfig({
+    this.distinctId,
+    this.isIdentifiedId = false,
+    this.featureFlags,
+    this.featureFlagPayloads,
+  });
+
+  /// The distinct id to seed on first launch.
+  ///
+  /// When [isIdentifiedId] is `false` (the default) this becomes the anonymous
+  /// id — the `$distinct_id` on pre-identify events. When `true` it is treated
+  /// as an already-identified user's distinct id.
+  final String? distinctId;
+
+  /// Whether [distinctId] represents an already-identified user.
+  ///
+  /// Defaults to `false`. Set to `true` when the host application resolved the
+  /// user's identity outside the SDK (for example from a backend session token).
+  final bool isIdentifiedId;
+
+  /// Feature flag values served until the first `/flags` response arrives,
+  /// keyed by flag key. Each value is a `bool` for boolean flags or a `String`
+  /// for multivariate flags. Only enabled values are served: `false` or an
+  /// empty string is dropped.
+  final Map<String, Object>? featureFlags;
+
+  /// JSON payloads paired with [featureFlags], keyed by flag key. Each value is
+  /// the already-decoded payload (map, list, string, number, `null`, ...).
+  final Map<String, Object?>? featureFlagPayloads;
+
+  // Differs from PostHog upstream: `toMap()` was removed (it existed for the
+  // MethodChannel). Its validation logic was kept as `validate()` — that part
+  // serves to warn the caller, not to serialize.
+
+  /// Validates the bootstrap values and warns about any problems.
+  ///
+  /// `Posthog().setup(config)` da bir marta chaqiriladi.
+  void validate() {
+    final flags = featureFlags;
+    if (flags != null) {
+      for (final entry in flags.entries) {
+        // Only bool/String are served (see [featureFlags]); anything else is
+        // dropped silently, so warn instead of leaving no trace.
+        if (entry.value is! bool && entry.value is! String) {
+          printIfDebug(
+            '[PostHog] bootstrap featureFlags["${entry.key}"] is '
+            '${entry.value.runtimeType}; only bool and String values are served, '
+            'so this entry will be ignored.',
+          );
+        }
+      }
+    }
+  }
+}
+
+/// Configuration for the logs subsystem.
+///
+/// Assign values before calling `Posthog().setup(config)`. The identity and
+/// tuning fields are forwarded to the native iOS/Android logs configuration;
+/// [beforeSend] runs in Dart before a record is forwarded to the native SDK.
+///
+/// Every field that is `null` (or, for [resourceAttributes], empty) is left at
+/// the native SDK's default — it is not sent over the channel.
+///
+/// **Flutter web:** this configuration is **not** applied on web. The web SDK
+/// hooks onto an already-initialized posthog-js instance, so configure logs in
+/// your `posthog.init({...})` call instead. Only [beforeSend] runs on web (in
+/// Dart).
+class PostHogLogsConfig {
+  /// Creates a logs configuration with native defaults.
+  PostHogLogsConfig();
+
+  /// Sets the OTLP `service.name` resource attribute.
+  ///
+  /// When `null`, the native SDK's default is used (the app bundle id on Apple
+  /// platforms, the app namespace on Android).
+  String? serviceName;
+
+  /// Sets the OTLP `service.version` resource attribute.
+  ///
+  /// When `null`, the native SDK's default is used (the app version where the
+  /// platform provides one).
+  String? serviceVersion;
+
+  /// Sets the OTLP `deployment.environment` resource attribute (e.g.
+  /// `production`, `staging`). When `null`, the native SDK's default is used
+  /// (no environment).
+  String? environment;
+
+  /// Extra OTLP resource attributes merged into every payload.
+  ///
+  /// SDK-managed identity keys (`service.*`, `telemetry.sdk.*`) take precedence
+  /// and cannot be overridden.
+  Map<String, Object> resourceAttributes = {};
+
+  /// Periodic auto-flush interval. When `null`, the native default is used
+  /// (30s on iOS/Android).
+  Duration? flushInterval;
+
+  /// Queue depth that triggers an immediate flush. When `null`, the native
+  /// default is used (20 on iOS/Android).
+  int? flushAt;
+
+  /// Maximum number of records sent per POST. When `null`, the native default
+  /// is used (50 on iOS/Android).
+  int? maxBatchSize;
+
+  /// Maximum number of buffered records before the oldest are dropped (FIFO).
+  /// When `null`, the native default is used (1000 on iOS/Android).
+  int? maxBufferSize;
+
+  /// Maximum number of logs accepted per rate-cap window before excess logs are
+  /// dropped. When `null`, the native default is used (500 on iOS/Android). A
+  /// non-positive value disables the cap natively.
+  int? rateCapMaxLogs;
+
+  /// Length of the rate-cap window. When `null`, the native default is used
+  /// (10s on iOS/Android).
+  Duration? rateCapWindow;
+
+  /// Callbacks to intercept and modify log records before they are forwarded to
+  /// the native SDK.
+  ///
+  /// Callbacks are invoked in order for records captured via
+  /// `Posthog().captureLog()` and the `Posthog().logger` facade. Each callback
+  /// receives the record (possibly modified by previous callbacks). Return a
+  /// possibly modified record to continue, or return `null` to drop it.
+  /// Blanking the body also drops the record.
+  ///
+  /// **Example:**
+  /// ```dart
+  /// config.logsConfig.beforeSend = [
+  ///   (record) {
+  ///     record.attributes?.remove('password');
+  ///     return record;
+  ///   },
+  ///   (record) => record.body.contains('secret') ? null : record,
+  /// ];
+  /// ```
+  ///
+  /// **Note:**
+  /// - Runs in Dart on all platforms — it is intentionally not forwarded to the
+  ///   native SDKs' own `beforeSend`. Dart callbacks cannot cross the platform
+  ///   channel, and running it here gives identical behavior everywhere
+  ///   (including web). This mirrors the event [PostHogConfig.beforeSend].
+  /// - Callbacks can be synchronous or asynchronous (via
+  ///   `FutureOr<PostHogLogRecord?>`).
+  /// - A callback that throws is logged, and the record is dropped.
+  /// - The W3C trace fields (`traceId`, `spanId`, `traceFlags`) are **not**
+  ///   part of [PostHogLogRecord] and are not visible here. They pass straight
+  ///   through to the native SDK, so they cannot be redacted or used to drop a
+  ///   record. Keep anything sensitive out of those fields; put it in [body] or
+  ///   [PostHogLogRecord.attributes], which a callback can scrub or drop.
+  List<BeforeSendLogCallback> beforeSend = [];
+
+  // Differs from PostHog upstream: `toMap()` and `_wholeSeconds()` were
+  // removed. They existed for the MethodChannel; because the native API
+  // expected whole seconds, `_wholeSeconds` rounded a sub-second `Duration` up
+  // to 1s. Pure Dart uses the `Duration` directly, with no such limit.
+}
+
+/// Configuration for rage-click autocapture on iOS and Mac Catalyst.
+///
+/// Assign an instance to [PostHogConfig.rageClickConfig] before calling
+/// `Posthog().setup(config)`. Other platforms ignore this configuration.
+class PostHogRageClickConfig {
+  /// Creates a rage-click configuration using the native defaults.
+  PostHogRageClickConfig();
+
+  /// Whether rapid repeated taps are captured as `$rageclick` events.
+  ///
+  /// Defaults to `true`.
+  var enabled = true;
+
+  /// Maximum Manhattan distance, in logical points, between consecutive taps.
+  ///
+  /// Defaults to `30`.
+  var thresholdPoints = 30.0;
+
+  /// Maximum time between consecutive taps in the same sequence.
+  ///
+  /// Defaults to one second.
+  var timeoutInterval = const Duration(seconds: 1);
+
+  /// Number of consecutive taps required to capture a rage click.
+  ///
+  /// Defaults to `3`.
+  var minimumTapCount = 3;
+
+  // Differs from PostHog upstream: `toMap()` was removed (it existed for the
+  // MethodChannel).
+}
+
+/// Configuration for mobile session replay capture and masking.
+///
+/// Assign an instance to [PostHogConfig.sessionReplayConfig] before calling
+/// `Posthog().setup(config)`.
+class PostHogSessionReplayConfig {
+  /// Creates a session replay configuration with default masking enabled.
+  PostHogSessionReplayConfig();
+
+  /// Enable masking of all text and text input fields.
+  /// Default: true.
+  ///
+  /// With [captureNativeScreens] enabled, setting this false also unmasks text
+  /// on captured native screens, including native input fields (passwords,
+  /// card numbers) you may not have built.
+  var maskAllTexts = true;
+
+  /// Enable masking of all images.
+  /// Default: true.
+  var maskAllImages = true;
+
+  /// Deprecated setter that forwards assigned values to [throttleDelay].
+  ///
+  /// Debouncer delay used to reduce the number of snapshots captured and reduce
+  /// performance impact. This is used for capturing the view as a screenshot.
+  /// The lower the number, the more snapshots will be captured but higher the
+  /// performance impact. Defaults to 1s.
+  @Deprecated('Deprecated in favor of [throttleDelay] from v4.8.0.')
+  set debouncerDelay(Duration debouncerDelay) {
+    throttleDelay = debouncerDelay;
+  }
+
+  /// Throttling delay used to reduce the number of snapshots captured and reduce
+  /// performance impact.
+  ///
+  /// This is used for capturing the view as a screenshot. The lower the number,
+  /// the more snapshots will be captured but higher the performance impact.
+  /// Defaults to 1s.
+  var throttleDelay = const Duration(seconds: 1);
+
+  /// Session replay sample rate between 0 and 1.
+  /// Local config has precedence over remote config when both are set.
+  /// If null, sampling is controlled by remote config (when available).
+  double? sampleRate;
+
+  /// Mask all platform views (WebView, Maps, etc.) in session replay.
+  ///
+  /// Default: true.
+  ///
+  /// When true, every platform view is covered with a black rectangle in
+  /// session replay screenshots. Set to false to opt out globally, or wrap
+  /// individual views with [PostHogPlatformView] for per-view control.
+  ///
+  /// Setting this false reveals every texture-backed view, including camera
+  /// previews (e.g. the `camera` plugin) — prefer per-view
+  /// [PostHogPlatformView] opt-ins over the global opt-out.
+  ///
+  /// Applies only to native views embedded in the Flutter layout. For native
+  /// screens presented over the whole app, see [captureNativeScreens].
+  var maskAllPlatformViews = true;
+
+  /// Capture native screens that cover the Flutter UI (full-screen paywalls,
+  /// presented view controllers, native activities) via the native replay
+  /// SDK, so they appear in replay instead of a frozen Flutter frame.
+  /// When enabled and a detected screen cannot be captured, a single black
+  /// placeholder frame is sent instead; if that also fails, replay keeps
+  /// showing the last Flutter frame. With this flag off there is no
+  /// placeholder — nothing about replay changes.
+  ///
+  /// Only full-screen, same-process screens are detected. Not captured:
+  /// partial-height sheets (e.g. Apple Pay, share sheet), other-process
+  /// content, Android dialogs/Custom Tabs, and iOS covers without an opaque
+  /// background — replay keeps showing the covered Flutter UI for those.
+  ///
+  /// Opt-in: enabling this starts a lightweight occlusion detector. When false
+  /// (the default), the covered Flutter tree keeps recording, as before.
+  ///
+  /// Captured native frames honor your [maskAllTexts] / [maskAllImages]
+  /// settings — with the defaults (both true) all native text and images are
+  /// masked; setting either false reveals it on native screens too.
+  ///
+  /// Applies only to native screens presented over the whole app. For native
+  /// views embedded in the Flutter layout, see [maskAllPlatformViews].
+  ///
+  /// Can be changed at runtime after setup — turning it off before presenting
+  /// a sensitive native screen guarantees that screen is not captured.
+  ///
+  /// Default: false. Requires native SDK support for on-demand capture.
+  ///
+  /// Differs from PostHog upstream: **a no-op** in this implementation.
+  /// Capturing native screens requires the native replay SDK's on-demand
+  /// capture, which does not exist in pure Dart. The field is kept for API
+  /// compatibility: setting it does not error, but changes nothing. A native
+  /// screen covering the Flutter UI appears in the replay as the last Flutter
+  /// frame.
+  @Deprecated(
+    'No-op in the pure-Dart implementation. Requires the native SDK.',
+  )
+  bool captureNativeScreens = false;
+
+  // Differs from PostHog upstream: `toMap()` was removed (it existed for the
+  // MethodChannel).
+}
+
+/// Configuration for PostHog error tracking and exception capture.
+class PostHogErrorTrackingConfig {
+  /// Creates an error tracking configuration with all autocapture disabled.
+  PostHogErrorTrackingConfig();
+
+  /// List of package names to be considered in-app frames for exception tracking.
+  ///
+  /// Example:
+  /// ```dart
+  /// config.errorTrackingConfig.inAppIncludes.addAll([
+  ///   'package:your_app',
+  ///   'package:your_company_utils',
+  /// ]);
+  /// ```
+  ///
+  /// All exception stack trace frames from these packages will be considered
+  /// in-app.
+  ///
+  /// This option takes precedence over inAppExcludes.
+  /// For Flutter/Dart, this typically includes:
+  /// - Your app's main package (e.g., "package:your_app")
+  /// - Any internal packages you own (e.g., "package:your_company_utils")
+  ///
+  /// **Note:**
+  /// - Flutter web: Not supported
+  ///
+  final inAppIncludes = <String>[];
+
+  /// List of package names to exclude from in-app frames for exception tracking.
+  ///
+  /// Example:
+  /// ```dart
+  /// config.errorTrackingConfig.inAppExcludes.addAll([
+  ///   'package:third_party_lib',
+  ///   'package:analytics_package',
+  /// ]);
+  /// ```
+  ///
+  /// All exception stack trace frames from these packages will be considered
+  /// external.
+  ///
+  /// Note: [inAppIncludes] takes precedence over this setting.
+  /// Common packages to exclude:
+  /// - Third-party analytics packages
+  /// - External utility libraries
+  /// - Packages you don't control
+  ///
+  /// **Note:**
+  /// - Flutter web: Not supported
+  /// - Android: Not supported
+  ///
+  final inAppExcludes = <String>[];
+
+  /// Configures whether stack trace frames are considered in-app by default
+  /// when the origin cannot be determined or no explicit includes/excludes
+  /// match.
+  ///
+  /// - If true: Frames are inApp unless explicitly excluded (allowlist approach)
+  /// - If false: Frames are external unless explicitly included (denylist approach)
+  ///
+  /// Default behavior when true:
+  /// - Local files (no package prefix) are inApp
+  /// - dart and flutter packages are excluded
+  /// - All other packages are inApp unless in inAppExcludes
+  ///
+  /// **Note:**
+  /// - Flutter web: Not supported
+  /// - Android: Not supported
+  ///
+  var inAppByDefault = true;
+
+  /// Enable automatic capture of Flutter framework errors.
+  ///
+  /// Controls whether `FlutterError.onError` errors are captured.
+  ///
+  /// Default: false
+  var captureFlutterErrors = false;
+
+  /// Enable capturing of silent Flutter errors.
+  ///
+  /// Controls whether Flutter errors marked as silent
+  /// (`FlutterErrorDetails.silent = true`) are captured.
+  ///
+  /// Default: false
+  var captureSilentFlutterErrors = false;
+
+  /// Enable automatic capture of Dart runtime errors.
+  ///
+  /// Controls whether `PlatformDispatcher.onError` errors are captured.
+  ///
+  /// **Note:**
+  /// - Flutter web: Not supported
+  ///
+  /// Default: false
+  var capturePlatformDispatcherErrors = false;
+
+  /// Enable automatic capture of exceptions in the native SDKs
+  /// (Android and Apple platforms).
+  ///
+  /// Controls whether native exceptions are captured.
+  ///
+  /// **Apple (iOS, macOS, tvOS):**
+  ///
+  /// Native error tracking on Apple platforms is currently experimental
+  ///
+  /// Captures Mach exceptions (e.g., EXC_BAD_ACCESS), POSIX signals
+  /// (e.g., SIGSEGV, SIGABRT), and uncaught NSExceptions.
+  /// Crashes are persisted to disk and sent as `$exception` events with
+  /// level "fatal" on the next app launch.
+  /// Not available on watchOS or visionOS due to platform limitations.
+  ///
+  /// For symbolicated stack traces, add a build phase script to your
+  /// Xcode project to upload debug symbols.
+  /// See: https://posthog.com/docs/error-tracking/upload-source-maps/ios
+  ///
+  /// **Android:**
+  ///
+  /// Captures Java/Kotlin exceptions only (no native C/C++ crashes).
+  ///
+  /// Stacktrace demangling for minified builds is supported by installing
+  /// the PostHog Gradle plugin to upload ProGuard/R8 mappings.
+  /// See: https://posthog.com/docs/error-tracking/upload-mappings/android
+  ///
+  /// Default: false
+  var captureNativeExceptions = false;
+
+  /// Enable automatic capture of isolate errors.
+  ///
+  /// Controls whether errors from the current isolate are captured.
+  /// This includes errors from the main isolate and any isolates spawned
+  /// without explicit error handling.
+  ///
+  /// **Note:**
+  /// - Flutter web: Not supported
+  ///
+  /// Default: false
+  var captureIsolateErrors = false;
+
+  /// Configuration for exception steps (breadcrumb-style context records
+  /// attached to every captured `$exception` as `$exception_steps`).
+  ///
+  /// Record steps with `Posthog().addExceptionStep()`.
+  final exceptionSteps = PostHogExceptionStepsConfig();
+
+  // Differs from PostHog upstream: `toMap()` was removed (it existed for the
+  // MethodChannel).
+}
+
+/// Configuration for exception steps.
+///
+/// Exception steps are breadcrumb-style context records recorded over time via
+/// `Posthog().addExceptionStep()`. The SDK keeps a rolling, byte-bounded buffer
+/// of these steps and attaches a snapshot to every captured `$exception` event
+/// as `$exception_steps`, giving the error tracking UI a timeline of recent
+/// activity leading up to each error.
+///
+/// Differs from PostHog upstream: in the official plugin this buffer belonged
+/// to the native SDK (iOS/Android), so steps survived a native fatal crash and
+/// were attached to the crash `$exception` on the next launch. Here the buffer
+/// lives in Dart and behaves identically on every platform, but **does not
+/// survive a native fatal crash** — it dies with the process. Every Dart-side
+/// error (including `Posthog().captureException()`) still gets its steps.
+class PostHogExceptionStepsConfig {
+  /// Creates an exception-steps configuration with default values.
+  PostHogExceptionStepsConfig();
+
+  /// Whether recording and attaching exception steps is enabled.
+  ///
+  /// When disabled, `Posthog().addExceptionStep()` is a no-op and nothing is
+  /// attached. Defaults to `true`.
+  var enabled = true;
+
+  /// Total UTF-8 byte budget for the rolling step buffer.
+  ///
+  /// When adding a step would exceed the budget, the oldest steps are evicted
+  /// until the total fits. A single step larger than the budget is rejected
+  /// outright. Defaults to `32768` (32 KiB).
+  var maxBytes = 32768;
+
+  // Differs from PostHog upstream: `toMap()` was removed (it existed for the
+  // MethodChannel).
+}
